@@ -13,11 +13,12 @@ region = read_binary(filename_region, Int32)
 
 v_counts = value_counts(region)
 
-region_uniques = sort(unique(region))
-region_map = Dict(zip(region_uniques, 1:n_regions))
-
 n_regions = length(v_counts)
 n_points = size(points)[2]
+
+region_uniques = sort(unique(region))
+region_map = Dict(zip(region_uniques, 1:n_regions))
+##
 
 region_points = zeros(Bool, (n_regions, n_points))
 
@@ -34,6 +35,18 @@ filename_points_region = joinpath(folder, "M13_IRC_points_region.bool")
 
 open(filename_points_region, "w") do f
     write(f, region_points)
+end
+
+##
+axes_fibrosis = map(x -> region_map[x], [32, 128])
+mask_fibrosis = reduce(.|, eachrow(region_points[axes_fibrosis, :]))
+
+probas = calculate_binomial_probas(S, collect(mask_fibrosis))
+
+filename_binomial_probas = joinpath(folder, "M13_IRC_binomial_probas.Float64")
+
+open(filename_binomial_probas, "w") do f
+    write(f, probas)
 end
 
 ##
@@ -80,3 +93,5 @@ open(filename_components, "w") do f
         write(f, line * "\n")
     end
 end
+
+##
