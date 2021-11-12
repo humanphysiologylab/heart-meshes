@@ -18,8 +18,8 @@ indices_fibrosis = findall(mask_fibrosis)
 btree = BallTree(points; leafsize = 30, reorder = false)
 
 ## try find_area
-index_center = 450_000
-radius = 1e4
+index_center = 1_022_380
+radius = 3e4
 
 k, v = find_area(index_center, radius, points, S, btree)
 

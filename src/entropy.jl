@@ -14,5 +14,5 @@ end
 
 function calculate_entropy(probas)
     indices_zero = iszero.(probas)
-    sum(map(p -> -p * log(p), probas[.!indices_zero])) + sum(indices_zero)
+    sum(map(p -> -p * log(p), probas[.!indices_zero]))
 end
