@@ -1,35 +1,45 @@
 include("load_src.jl")
 
-##
-# folder = "/media/andrey/1TBlob/HPL/Data/Rheeda/M15"
-folder = "/media/andrey/ssd2/WORK/HPL/Data/rheeda/M13/"
 
-##
-filename_points = joinpath(folder, "M13_IRC_3Dpoints.float32")
-points = read_binary(filename_points, Float32, (3, :))
+function load_files(folder::String)
 
-##
-filename_tetra = joinpath(folder, "M13_IRC_tetra.int32")
-tetra = read_binary(filename_tetra, Int32, (4, :))
-tetra = permutedims(tetra, [2, 1])
+    points = nothing
+    tetra = nothing
+    region_points = nothing
+    S = nothing
 
-##
-filename_points_region = joinpath(folder, "M13_IRC_points_region.bool")
-region_points = read_binary(filename_points_region, Bool, (4, :))
+    for filename ∈ readdir(folder, join = true)
 
-##
-filename_I = joinpath(folder, "I.int32")
-filename_J = joinpath(folder, "J.int32")
+        if endswith(filename, "3Dpoints.float32")
+            points = read_binary(filename, Float32, (3, :))
+        elseif endswith(filename, "tetra.int32")
+            tetra = read_binary(filename, Int32, (4, :))
+            tetra = permutedims(tetra, [2, 1])
+        elseif endswith(filename, "points_region.bool")
+            region_points = read_binary(filename, Bool, (4, :))
+        end
 
-I = read_binary(filename_I, Int32)
-J = read_binary(filename_J, Int32)
-V = ones(Bool, length(I))
+        filename_I = joinpath(folder, "I.int32")
+        filename_J = joinpath(folder, "J.int32")
 
-S = sparse(I, J, V)
-S .|= transpose(S)
+        if isfile(filename_I) && isfile(filename_J)
+
+            I = read_binary(filename_I, Int32)
+            J = read_binary(filename_J, Int32)
+            V = ones(Bool, length(I))
+
+            S = sparse(I, J, V)
+            S .|= transpose(S)
+
+        end
+
+    end
+
+    (; points, tetra, region_points, S)
+
+end
 
 
-##
 function load_connected_components(region_id, folder)
 
     filename_components = joinpath(folder, "connected_components_id$region_id.txt")
