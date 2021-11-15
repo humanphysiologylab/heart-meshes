@@ -1,4 +1,6 @@
-include("load_src.jl")
+using SparseArrays
+
+include("../src/read_binary.jl")
 
 
 function load_files(folder::String)
@@ -6,7 +8,7 @@ function load_files(folder::String)
     points = nothing
     tetra = nothing
     region_points = nothing
-    S = nothing
+    adj_matrix = nothing
 
     for filename ∈ readdir(folder, join = true)
 
@@ -21,21 +23,20 @@ function load_files(folder::String)
 
         filename_I = joinpath(folder, "I.int32")
         filename_J = joinpath(folder, "J.int32")
+        filename_V = joinpath(folder, "edge_weights.float32")
 
-        if isfile(filename_I) && isfile(filename_J)
+        if all(isfile, (filename_I, filename_J, filename_V))
 
             I = read_binary(filename_I, Int32)
             J = read_binary(filename_J, Int32)
-            V = ones(Bool, length(I))
+            edge_weights = read_binary(filename_V, Float32)
 
-            S = sparse(I, J, V)
-            S .|= transpose(S)
-
+            adj_matrix = sparse(vcat(I, J), vcat(J, I), vcat(edge_weights, edge_weights))
         end
 
     end
 
-    (; points, tetra, region_points, S)
+    (; points, tetra, region_points, adj_matrix)
 
 end
 

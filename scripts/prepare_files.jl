@@ -5,12 +5,10 @@ include("load_files.jl")
 folder = "/media/andrey/ssd2/WORK/HPL/Data/rheeda/M13/"
 
 ##
-
 filename_region = joinpath(folder, "M13_IRC_region.int32")
 region = read_binary(filename_region, Int32)
 
 ##
-
 v_counts = value_counts(region)
 
 n_regions = length(v_counts)
@@ -18,8 +16,8 @@ n_points = size(points)[2]
 
 region_uniques = sort(unique(region))
 region_map = Dict(zip(region_uniques, 1:n_regions))
-##
 
+##
 region_points = zeros(Bool, (n_regions, n_points))
 
 for column in eachcol(tetra .+ 1)
@@ -92,6 +90,20 @@ open(filename_components, "w") do f
         line = join(string.(indices_native), " ")
         write(f, line * "\n")
     end
+end
+
+##
+using Distances
+
+I, J, V = findnz(S)
+edge_weights = colwise(Euclidean(), points[:, I], points[:, J])
+adj_matrix = sparse(I, J, edge_weights)
+
+##
+filename_weights = joinpath(folder, "edge_weights.float32")
+
+open(filename_weights, "w") do f
+    write(f, edge_weights)
 end
 
 ##

@@ -1,18 +1,20 @@
-function proba_binomial(n, k)
-    binomial(n, k) / 2^n
-end
+function calculate_FE_probas(
+    adjacency_matrix::SparseMatrixCSC{Bool,T},
+    mask_fibrosis,
+    fibrosis_only = false,
+) where {T<:Integer}
 
-
-function precompute_pascals_triangle(n_max)
-    P = zeros(n_max + 1, n_max + 1)
-    for n = 0:n_max, k = 0:n
-        P[n+1, k+1] = proba_binomial(n, k)
-    end
-    return P
+    mask = fibrosis_only ? mask_fibrosis : (:)
+    n_total = sum(adjacency_matrix[mask, :], dims = 2)
+    n_fibrosis = sum(adjacency_matrix[mask, mask_fibrosis], dims = 2)
+    probas = n_fibrosis ./ n_total
+    probas[mask_fibrosis] = 1 .- probas[mask_fibrosis]
+    return probas[:, 1]
 end
 
 
 function calculate_entropy(probas)
     indices_zero = iszero.(probas)
-    sum(map(p -> -p * log(p), probas[.!indices_zero]))
+    probas_nonzero = @view probas[.!indices_zero]
+    sum(map(p -> -p * log(p), probas_nonzero))
 end

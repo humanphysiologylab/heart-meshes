@@ -1,9 +1,7 @@
-using SparseArrays
+using DataStructures
 using Distances: Euclidean, colwise
-using NearestNeighbors: inrange
-
-
-include("dijkstra.jl")
+using Graphs: DijkstraState, AbstractGraph
+using SparseArrays
 
 
 function create_adjacency_matrix(elements::Matrix{T}) where {T}
@@ -36,58 +34,6 @@ function create_adjacency_matrix(elements::Matrix{T}) where {T}
 end
 
 
-function breadth_first_search(
-    adjacency_matrix::SparseMatrixCSC{Bool,T},
-    start = 1,
-) where {T}
-
-    n_vertices = size(adjacency_matrix)[1]
-    visited = zeros(Bool, n_vertices)
-    queue = Set{T}(start)
-
-    while !isempty(queue)
-
-        vertex = pop!(queue)
-        visited[vertex] = true
-
-        neigbours = findnz(adjacency_matrix[vertex, :])[1]
-        for u in neigbours
-            if !visited[u]
-                visited[u] = true
-                push!(queue, u)
-            end
-        end
-    end
-
-    return visited
-
-end
-
-
-function find_connected_components(adjacency_matrix, start = 1)
-
-    components = Set{Int}[]
-    n_vertices = size(adjacency_matrix)[1]
-    visited_total = zeros(Bool, n_vertices)
-
-    while !isnothing(start)
-
-        visited = breadth_first_search(adjacency_matrix, start)
-        component = Set(findall(visited))
-        push!(components, component)
-
-        visited_total .|= visited
-
-        # @show start, length(component)   
-        start = findfirst(!, visited_total)
-
-    end
-
-    return components
-
-end
-
-
 function color_connected_components(components, n_max)
 
     color = zeros(Int, n_max)
@@ -102,28 +48,59 @@ function color_connected_components(components, n_max)
 end
 
 
-function find_indices_ball(index_center, radius, points, adjacency_matrix, btree)
-    pₒ = points[:, index_center]
-    indices_ball = inrange(btree, pₒ, radius, false)
-end
+function dijkstra_many_sourses(
+    g::AbstractGraph,
+    srcs::Vector{U},
+    distmx::AbstractMatrix{T} = weights(g),
+) where {T<:Real} where {U<:Integer}
 
+    nvg = nv(g)
 
-function find_area(index_center, radius, points, adjacency_matrix, btree)
+    dists = fill(typemax(T), nvg)
+    parents = zeros(U, nvg)
+    visited = zeros(Bool, nvg)
+    nearest_src = zeros(U, nvg)
 
-    indices_ball = find_indices_ball(index_center, radius, points, adjacency_matrix, btree)
+    H = PriorityQueue{U,T}()
 
-    points_ball = points[:, indices_ball]
-    adj_ball = adjacency_matrix[indices_ball, indices_ball]
+    for src in srcs
+        dists[src] = zero(T)
+        visited[src] = true
+        H[src] = zero(T)
 
-    I_ball, J_ball, V_ball = findnz(adj_ball)
-    index_center_ball = findfirst(isequal(index_center), indices_ball)
+        nearest_src[src] = src
+    end
 
-    weights = colwise(Euclidean(), points_ball[:, I_ball], points_ball[:, J_ball])
+    while !isempty(H)
 
-    path = calculate_dijkstra_path(I_ball, J_ball, weights, index_center_ball)
+        u = dequeue!(H)
+        d = dists[u]
 
-    path_filtered_indices, path_filtered_weights = filter_dijkstra_path(path, radius)
+        for v in outneighbors(g, u)
 
-    return indices_ball[path_filtered_indices], path_filtered_weights
+            alt = d + distmx[u, v]
 
+            if !visited[v]
+
+                visited[v] = true
+                dists[v] = alt
+                parents[v] = u
+                nearest_src[v] = nearest_src[u]
+                H[v] = alt
+
+            elseif alt < dists[v]
+
+                nearest_src[v] = nearest_src[u]
+                dists[v] = alt
+                parents[v] = u
+                H[v] = alt
+
+            end
+        end
+    end
+
+    preds = Vector{Vector{U}}()
+    pathcounts = Vector{T}()
+
+    return DijkstraState{T,U}(nearest_src, dists, preds, pathcounts, nearest_src)
 end
