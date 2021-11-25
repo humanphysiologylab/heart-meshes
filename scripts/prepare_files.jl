@@ -1,15 +1,16 @@
-include("load_src.jl")
 include("load_files.jl")
 
 ##
-folder = "/media/andrey/ssd2/WORK/HPL/Data/rheeda/M13/"
+folder = "/media/andrey/1TBlob/HPL/Data/Rheeda/M15"
 
 ##
-filename_region = joinpath(folder, "M13_IRC_region.int32")
+filename_region = joinpath(folder, "M15_IRC_region.int32")
 region = read_binary(filename_region, Int32)
 
 ##
-v_counts = value_counts(region)
+
+using StatsBase
+v_counts = countmap(region)
 
 n_regions = length(v_counts)
 n_points = size(points)[2]
@@ -29,7 +30,7 @@ for column in eachcol(tetra .+ 1)
 end
 
 ##
-filename_points_region = joinpath(folder, "M13_IRC_points_region.bool")
+filename_points_region = joinpath(folder, "M15_IRC_points_region.bool")
 
 open(filename_points_region, "w") do f
     write(f, region_points)
@@ -46,6 +47,18 @@ filename_binomial_probas = joinpath(folder, "M13_IRC_binomial_probas.Float64")
 open(filename_binomial_probas, "w") do f
     write(f, probas)
 end
+
+##
+
+filename_points = joinpath(folder, "M15_IRC_3Dpoints.float32")
+points = read_binary(filename_points, Float32, (3, :))
+
+
+##
+
+filename_tetra = joinpath(folder, "M15_IRC_tetra.int32")
+tetra = read_binary(filename_tetra, Int32, (4, :))
+tetra = permutedims(tetra, [2, 1])
 
 ##
 S = create_adjacency_matrix(tetra)
