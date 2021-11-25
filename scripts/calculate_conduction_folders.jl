@@ -45,7 +45,7 @@ end
 
 function process_folder_bin(folder_bin::String, adj_matrix::SparseMatrixCSC)
 
-    folder_prefix = chop(folder_bin, tail = length("_bin") + 1)
+    folder_prefix = chop(folder_bin, tail = length("_bin"))
 
     folder_output_light = folder_prefix * "_light"
     folder_output_results = folder_prefix * "_results"
@@ -87,6 +87,7 @@ function process_folder_bin(folder_bin::String, adj_matrix::SparseMatrixCSC)
 
         if isfile(filename_output_conduction)
             @info "$filename_output_conduction found, continue..."
+            continue
         end
 
         filename_output_starts = joinpath(
@@ -99,20 +100,26 @@ function process_folder_bin(folder_bin::String, adj_matrix::SparseMatrixCSC)
         )
 
         if all(isfile.([filename_output_times, filename_output_starts]))
-            @info "$folder_output_light is complete"
+            @info "$filename_output_times and $filename_output_starts are exist"
             times = read_binary(filename_output_times, Float32)
             starts = read_binary(filename_output_starts, Int32)
         else
             msg = [
-                "$folder_output_light is not complete",
+                "$stim_prefix is not complete",
                 "\tcreating:",
                 "\t$filename_output_starts",
                 "\t$filename_output_times"
             ]
             @info join(msg, "\n")
             times, starts = parse_activation_times(joinpath(folder_bin, filename_bin))
-            write(filename_output_times, times)
-            write(filename_output_starts, starts)
+            write(
+                filename_output_times,
+                convert.(Float32, times)
+            )
+            write(
+                filename_output_starts,
+                convert.(Int32, starts)
+            )
         end
 
         conduction_percent = fill(NaN32, size(times))
@@ -150,16 +157,19 @@ function run(folder_root = ".", folder_with_indices = nothing)
         adj_matrices[heart_id] = load_adj_matrix(folder)
     end
 
-
     for folder_bin in readdir(folder_root)
 
-        if !isdir(folder_bin)
+        if !isdir(folder_bin) 
             continue
         end
 
-        if "M13" in folder_bin
+        if !endswith(folder_bin, "_bin") 
+            continue
+        end
+
+        if occursin("M13", folder_bin)
             adj_matrix = adj_matrices[13]
-        elseif "M15" in folder_bin
+        elseif occursin("M15", folder_bin)
             adj_matrix = adj_matrices[15]
         else
             @warn "invalid $(folder_bin)!"

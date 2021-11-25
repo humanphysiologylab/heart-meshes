@@ -1,5 +1,4 @@
 using SparseArrays
-using ProgressMeter
 
 
 function calculate_conduction_map_vec(
@@ -26,7 +25,6 @@ function calculate_conduction_map_vec(
 
     @fastmath @inbounds begin
 
-        #  @showprogress for i = 1:stride:n_points
         for i = 1:stride:n_points
 
             start_i, stop_i = starts[i], stops[i]
@@ -86,7 +84,6 @@ function calculate_conduction_map(
 
     @fastmath @inbounds begin
 
-        #  @showprogress for i = 1:stride:n_points
         for i = 1:stride:n_points
 
             start_i, stop_i = starts[i], stops[i]
