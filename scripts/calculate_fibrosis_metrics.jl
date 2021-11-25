@@ -21,7 +21,7 @@ g = SimpleWeightedGraph(adj_matrix)
 
 ##
 n_points = size(points)[2]
-n_samples = 10_000
+n_samples = 100_000
 radia = [1e4]
 
 probas = calculate_FE_probas(adj_matrix .> 0.0, mask_fibrosis)
@@ -32,6 +32,7 @@ filename_metrics = joinpath(folder, "fibrosis_metrics.csv")
 ##
 
 if !isfile(filename_metrics)
+    @warn "Make header!"
     header_names = ["i", "r", "x", "y", "z", "n_total", "n_fibrosis", "fd", "fe"]
     header = join(header_names, ",")
     write(filename_metrics, header * "\n")
