@@ -68,9 +68,7 @@ function calculate_conduction_map(
     output_prealloc::Union{Vector{F},Nothing} = nothing,
 )::Union{Vector{F},Nothing} where {F<:AbstractFloat} where {I<:Integer}
 
-    stops = similar(starts)
-    @views stops[1:end-1] = starts[2:end] .- 1
-    stops[end] = length(times)
+    stops = create_stops(starts, length(times))
 
     n_points = length(starts)
 

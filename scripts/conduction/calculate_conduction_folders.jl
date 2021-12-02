@@ -1,19 +1,7 @@
 using SparseArrays
 
 include("calculate_conduction_map.jl")
-include("../src/read_binary.jl")
-
-
-function load_adj_matrix(folder::String)
-    filename_I = joinpath(folder, "I.int32")
-    filename_J = joinpath(folder, "J.int32")
-
-    I = read_binary(filename_I, Int32)
-    J = read_binary(filename_J, Int32)
-
-    adj_matrix = sparse(vcat(I, J), vcat(J, I), trues(length(I) * 2))
-end
-
+include("../../src/io.jl")
 
 function parse_activation_times(filename_bin::String)
 
@@ -30,9 +18,7 @@ function parse_activation_times(filename_bin::String)
     n_points = last(vertices_sorted)
 
     starts = map(i -> searchsortedfirst(vertices_sorted, i), 1:n_points)
-    stops = similar(starts)
-    @views stops[1:end-1] = starts[2:end] .- 1
-    stops[end] = length(times)
+    stops = create_stops(starts, length(times))
 
     for (start, stop) ∈ zip(starts, stops)
         times_sorted[start:stop] .= sort(times_sorted[start:stop])
@@ -122,6 +108,11 @@ function process_folder_bin(folder_bin::String, adj_matrix::SparseMatrixCSC)
             )
         end
 
+        if size(adj_matrix, 1) ≠ length(starts)
+            @warn "invalid starts\ncontinue..."
+            continue
+        end
+
         conduction_percent = fill(NaN32, size(times))
         dt_max = 10.0
 
@@ -147,7 +138,7 @@ end
 function run(folder_root = ".", folder_with_indices = nothing)
 
     if isnothing(folder_with_indices)
-        folder_with_indices = "/media/andrey/ssd2/WORK/HPL/Data/rheeda/"
+        folder_with_indices = "/media/andrey/easystore/Rheeda"
     end
 
     adj_matrices = Dict{Int, SparseMatrixCSC}()
