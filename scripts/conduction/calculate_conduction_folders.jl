@@ -66,24 +66,16 @@ function process_folder_bin(folder_bin::String, adj_matrix::SparseMatrixCSC)
             mkdir(folder_output_results_stim)
         end
 
-        filename_output_conduction = joinpath(
-            folder_output_results_stim,
-            "conduction.float32"
-        )
+        filename_output_conduction =
+            joinpath(folder_output_results_stim, "conduction.float32")
 
         if isfile(filename_output_conduction)
             @info "$filename_output_conduction found, continue..."
             continue
         end
 
-        filename_output_starts = joinpath(
-            folder_output_light_stim,
-            "indices_start.int32"
-        )
-        filename_output_times = joinpath(
-            folder_output_light_stim,
-            "times.float32"
-        )
+        filename_output_starts = joinpath(folder_output_light_stim, "indices_start.int32")
+        filename_output_times = joinpath(folder_output_light_stim, "times.float32")
 
         if all(isfile.([filename_output_times, filename_output_starts]))
             @info "$filename_output_times and $filename_output_starts are exist"
@@ -94,18 +86,12 @@ function process_folder_bin(folder_bin::String, adj_matrix::SparseMatrixCSC)
                 "$stim_prefix is not complete",
                 "\tcreating:",
                 "\t$filename_output_starts",
-                "\t$filename_output_times"
+                "\t$filename_output_times",
             ]
             @info join(msg, "\n")
             times, starts = parse_activation_times(joinpath(folder_bin, filename_bin))
-            write(
-                filename_output_times,
-                convert.(Float32, times)
-            )
-            write(
-                filename_output_starts,
-                convert.(Int32, starts)
-            )
+            write(filename_output_times, convert.(Float32, times))
+            write(filename_output_starts, convert.(Int32, starts))
         end
 
         if size(adj_matrix, 1) ≠ length(starts)
@@ -124,10 +110,7 @@ function process_folder_bin(folder_bin::String, adj_matrix::SparseMatrixCSC)
             output_prealloc = conduction_percent,
         )
 
-        write(
-            filename_output_conduction,
-            convert.(Float32, conduction_percent),
-        )
+        write(filename_output_conduction, convert.(Float32, conduction_percent))
 
         @info "$filename_output_conduction is done!"
 
@@ -141,7 +124,7 @@ function run(folder_root = ".", folder_with_indices = nothing)
         folder_with_indices = "/media/andrey/easystore/Rheeda"
     end
 
-    adj_matrices = Dict{Int, SparseMatrixCSC}()
+    adj_matrices = Dict{Int,SparseMatrixCSC}()
 
     for heart_id in (13, 15)
         folder = joinpath(folder_with_indices, "M$heart_id")
@@ -150,11 +133,11 @@ function run(folder_root = ".", folder_with_indices = nothing)
 
     for folder_bin in readdir(folder_root)
 
-        if !isdir(folder_bin) 
+        if !isdir(folder_bin)
             continue
         end
 
-        if !endswith(folder_bin, "_bin") 
+        if !endswith(folder_bin, "_bin")
             continue
         end
 
@@ -174,4 +157,3 @@ function run(folder_root = ".", folder_with_indices = nothing)
     end
 
 end
-            
