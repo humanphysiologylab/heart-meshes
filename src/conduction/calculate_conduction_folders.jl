@@ -1,7 +1,8 @@
 using SparseArrays
 
 include("calculate_conduction_map.jl")
-include("../../src/io.jl")
+include("io.jl")
+
 
 function parse_activation_times(filename_bin::String)
 
@@ -117,6 +118,7 @@ function process_folder_bin(folder_bin::String, adj_matrix::SparseMatrixCSC)
     end
 
 end
+
 
 function run(folder_root = ".", folder_with_indices = nothing)
 

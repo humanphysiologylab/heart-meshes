@@ -1,7 +1,6 @@
 using ProgressMeter
-include("../../src/io.jl")
+include("../functions/io.jl")
 
-## 
 
 function collect_conduction_arrays(folder::String, time_switch::AbstractFloat = 2500.0)
 
@@ -51,15 +50,18 @@ function collect_conduction_arrays(folder::String, time_switch::AbstractFloat = 
             end
         end
 
+        # agg = sum
+        agg = x -> sum(isone.(x))
+
         @views for (i_point, (start, stop)) in enumerate(zip(starts, stops))
             index_after = searchsortedlast(times[start:stop], time_switch)
             r_before = start:start+index_after-1
             r_after = start+index_after:stop
 
-            result["before"]["sum"][i_point] += sum(conduction[r_before])
+            result["before"]["sum"][i_point] += agg(conduction[r_before])
             result["before"]["count"][i_point] += length(r_before)
 
-            result["after"]["sum"][i_point] += sum(conduction[r_after])
+            result["after"]["sum"][i_point] += agg(conduction[r_after])
             result["after"]["count"][i_point] += length(r_after)
         end
 
@@ -82,7 +84,7 @@ folder_save = "/media/andrey/easystore/Rheeda/activation/conduction-mean"
 for i_heart in hearts, i_group in groups
 
     folder_group_data = "/media/andrey/easystore/Rheeda/activation/data-light/M$i_heart/G$i_group"
-    filename_check = "M$(i_heart)-G$(i_group)-conduction-sum-before-$time_switch-ms.float64"
+    filename_check = "M$(i_heart)-G$(i_group)-conduction-roman-sum-before-$time_switch-ms.float64"
     if isfile(joinpath(folder_save, filename_check))
         @warn "$filename_check exists!"
         continue
@@ -96,7 +98,7 @@ for i_heart in hearts, i_group in groups
     for time_name in ("before", "after"), array_name in ("sum", "count")
 
         ext = (array_name == "sum") ? "float64" : "int64"
-        filename_conduction_mean = "M$(i_heart)-G$(i_group)-conduction-$array_name-$time_name-$time_switch-ms.$ext"
+        filename_conduction_mean = "M$(i_heart)-G$(i_group)-conduction-roman-$array_name-$time_name-$time_switch-ms.$ext"
         filename_conduction_mean_full = joinpath(folder_save, filename_conduction_mean)
         write(filename_conduction_mean_full, result[time_name][array_name])
 
