@@ -332,6 +332,12 @@ git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
 uuid = "82899510-4779-5014-852e-03e436cf321d"
 version = "1.0.0"
 
+[[JLFzf]]
+deps = ["Pipe", "REPL", "Random", "fzf_jll"]
+git-tree-sha1 = "a8d93f02e9db5428ccb73336a54c746e3e87edd3"
+uuid = "1019f520-868f-41f5-a6de-eb00f4b6a39c"
+version = "0.1.4"
+
 [[JLLWrappers]]
 deps = ["Preferences"]
 git-tree-sha1 = "642a199af8b68253517b80bd3bfd17eb4e84df6e"
@@ -505,6 +511,12 @@ version = "0.4.9"
 [[NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 
+[[OhMyREPL]]
+deps = ["Crayons", "JLFzf", "Markdown", "Pkg", "Printf", "REPL", "Tokenize"]
+git-tree-sha1 = "646c8cf453f25f12115ee09d57ca192c9af00618"
+uuid = "5fb14364-9ced-5910-84b2-373655c76a03"
+version = "0.5.10"
+
 [[OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
@@ -531,6 +543,11 @@ deps = ["Dates"]
 git-tree-sha1 = "ae4bbcadb2906ccc085cf52ac286dc1377dceccc"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 version = "2.1.2"
+
+[[Pipe]]
+git-tree-sha1 = "6842804e7867b115ca9de748a0cf6b364523c16d"
+uuid = "b98c9c47-44ae-5843-9183-064241ee97a0"
+version = "1.3.0"
 
 [[Pixman_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -900,6 +917,12 @@ deps = ["Artifacts", "Dbus_jll", "Glib_jll", "JLLWrappers", "Libdl", "Pkg", "Xor
 git-tree-sha1 = "d2d540cd145f2b2933614649c029d222fe125188"
 uuid = "0fc3237b-ac94-5853-b45c-d43d59a06200"
 version = "2.34.0+4"
+
+[[fzf_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "547d2167e376a423ad3c161c0aba34308cc897e7"
+uuid = "214eeab7-80f7-51ab-84ad-2988db7cef09"
+version = "0.27.2+0"
 
 [[gdk_pixbuf_jll]]
 deps = ["Artifacts", "Glib_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pkg", "Xorg_libX11_jll", "libpng_jll"]

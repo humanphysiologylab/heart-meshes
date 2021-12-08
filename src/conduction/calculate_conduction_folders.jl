@@ -1,10 +1,12 @@
 using SparseArrays
 
 include("calculate_conduction_map.jl")
-include("io.jl")
+include("../io/read_binary.jl")
+include("../misc/create_stops.jl")
+include("../io/load_adj_matrix.jl")
 
 
-function parse_activation_times(filename_bin::String)
+function parse_activation_times(filename_bin::String, n_points::Union{Nothing, Int})
 
     a = read_binary(filename_bin, Float32, (2, :))
     a = permutedims(a)
@@ -16,7 +18,13 @@ function parse_activation_times(filename_bin::String)
     vertices_sorted = vertices[indices_sortperm]
     times_sorted = times[indices_sortperm]
 
-    n_points = last(vertices_sorted)
+    n_points_found = last(vertices_sorted)
+
+    if isnothing(n_points)
+        n_points = n_points_found
+    elseif n_points ≠ n_points_found
+        @warn "n_points ≠ n_points_found\n$n_points ≠ $n_points_found" 
+    end
 
     starts = map(i -> searchsortedfirst(vertices_sorted, i), 1:n_points)
     stops = create_stops(starts, length(times))
@@ -90,15 +98,16 @@ function process_folder_bin(folder_bin::String, adj_matrix::SparseMatrixCSC)
                 "\t$filename_output_times",
             ]
             @info join(msg, "\n")
-            times, starts = parse_activation_times(joinpath(folder_bin, filename_bin))
+            n_points = size(adj_matrix, 1)
+            times, starts = parse_activation_times(
+                joinpath(folder_bin, filename_bin),
+                n_points
+            )
             write(filename_output_times, convert.(Float32, times))
             write(filename_output_starts, convert.(Int32, starts))
         end
 
-        if size(adj_matrix, 1) ≠ length(starts)
-            @warn "invalid starts\ncontinue..."
-            continue
-        end
+        @assert n_points == length(starts)
 
         conduction_percent = fill(NaN32, size(times))
         dt_max = 10.0
@@ -128,8 +137,9 @@ function run(folder_root = ".", folder_with_indices = nothing)
 
     adj_matrices = Dict{Int,SparseMatrixCSC}()
 
+    @info "loading adjacency matrices"
     for heart_id in (13, 15)
-        folder = joinpath(folder_with_indices, "M$heart_id")
+        folder = joinpath(folder_with_indices, "M$heart_id", "adj_matrix")
         adj_matrices[heart_id] = load_adj_matrix(folder)
     end
 
@@ -145,6 +155,7 @@ function run(folder_root = ".", folder_with_indices = nothing)
 
         if occursin("M13", folder_bin)
             adj_matrix = adj_matrices[13]
+            continue
         elseif occursin("M15", folder_bin)
             adj_matrix = adj_matrices[15]
         else
