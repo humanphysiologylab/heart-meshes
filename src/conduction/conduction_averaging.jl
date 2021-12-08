@@ -1,5 +1,6 @@
 using ProgressMeter
-include("../functions/io.jl")
+include("../io/read_binary.jl")
+include("../misc/create_stops.jl")
 
 
 function collect_conduction_arrays(folder::String, time_switch::AbstractFloat = 2500.0)
@@ -75,7 +76,7 @@ end
 
 ##
 
-hearts = 13, 15
+hearts = (15,)
 groups = 4:-1:1
 time_switch = 2500
 
@@ -98,12 +99,11 @@ for i_heart in hearts, i_group in groups
     for time_name in ("before", "after"), array_name in ("sum", "count")
 
         ext = (array_name == "sum") ? "float64" : "int64"
-        filename_conduction_mean = "M$(i_heart)-G$(i_group)-conduction-roman-$array_name-$time_name-$time_switch-ms.$ext"
+        filename_conduction_mean = "M$(i_heart)-G$(i_group)-conduction-binary-$array_name-$time_name-$time_switch-ms.$ext"
         filename_conduction_mean_full = joinpath(folder_save, filename_conduction_mean)
         write(filename_conduction_mean_full, result[time_name][array_name])
 
     end
-
 
 end
 

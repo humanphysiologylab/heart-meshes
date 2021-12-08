@@ -3,49 +3,54 @@ using ProgressMeter
 using Random
 using Statistics
 
-include("../src/graph.jl")
-include("../src/entropy.jl")
-include("../src/io.jl")
+include("../misc/graph.jl")
+include("../io/read_binary.jl")
+include("../io/load_adj_matrix.jl")
 
 ##
-heart_id = 13
-folder = joinpath("/media/andrey/easystore/Rheeda", "M$heart_id")
+heart_id = 15
 ##
 
+folder = joinpath("/media/andrey/easystore/Rheeda", "M$heart_id", "adj_matrix")
 adj_matrix = load_adj_matrix(folder, false)
 g = SimpleWeightedGraph(adj_matrix)
 
 ##
 
+using OrderedCollections
+
 arrays = Dict{String, Vector}()
 
-for i_group in 1:4,
-    time_name in ("before", "after"),
-    name in ("", "roman-")
+multi_index = OrderedDict(
+    "group" => 1:4,
+    "period" => ("before", "after"),
+    "method" => ("percent", "binary")
+)
+
+for index_values in Iterators.product(values(multi_index)...)
+    
+    i_group, period, method = index_values
 
     folder_conduction = "/media/andrey/easystore/Rheeda/activation/conduction-mean/"
     conduction_sum = read_binary(
-        joinpath(folder_conduction, "M$heart_id-G$i_group-conduction-$(name)$(sum)-$time_name-2500-ms.float64"),
+        joinpath(folder_conduction, "M$heart_id-G$i_group-conduction-$method-$sum-$period-2500-ms.float64"),
         Float64
     )
     conduction_count = read_binary(
-        joinpath(folder_conduction, "M$heart_id-G$i_group-conduction-$(name)$(count)-$time_name-2500-ms.int64"),
+        joinpath(folder_conduction, "M$heart_id-G$i_group-conduction-$method-$count-$period-2500-ms.int64"),
         Int64
     )
     wavebreak_mean = @. 1. - conduction_sum / conduction_count
     @. wavebreak_mean[isnan(wavebreak_mean)] = 1.
 
-    key = "wavebreaks-$(name)M$heart_id-G$i_group-$time_name"
+    key = "wavebreaks-M$heart_id-G$i_group-$period-$method"
     arrays[key] = wavebreak_mean
 
 end
-##
-filename_region = "/media/andrey/ssd2/WORK/HPL/Data/rheeda/M13/M13_IRC_points_region.int"
-region = read_binary(filename_region, Int)
-fibrosis_ids = [32, 128]
-mask_fibrosis = region .∈ Ref(fibrosis_ids)
 
-arrays["fibrosis-density"] = mask_fibrosis
+##
+filename_mask_fibrosis = joinpath("/media/andrey/easystore/Rheeda", "M$heart_id", "mask_fibrosis.bool")
+arrays["fibrosis-density"] = read_binary(filename_mask_fibrosis, Bool)
 
 ##
 n_points = size(adj_matrix, 1)
@@ -93,7 +98,7 @@ close(file_csv)
 ##
 using DelimitedFiles, DataFrames
 
-# filename_csv = joinpath(folder_save, "M13_wavebreaks_averaged_roman_srcs.csv")
+# filename_csv = joinpath(folder_save, "M15-all-r1e4-srcs.csv")
 data, header = readdlm(filename_csv, ',', Float64, header = true)
 
 df = DataFrame(data, vec(header))
@@ -104,7 +109,7 @@ df[!, vertex_id_column] = convert.(Int, df[!, vertex_id_column])
 ds = dijkstra_many_sourses(g, df[!, vertex_id_column])
 nearest_src = ds.parents
 
-columns = header_names[2:end]
+columns = header[2:end]
 
 df_interp = DataFrame()
 for c in columns
