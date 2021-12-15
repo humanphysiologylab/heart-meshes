@@ -6,7 +6,7 @@ include("../misc/create_stops.jl")
 include("../io/load_adj_matrix.jl")
 
 
-function parse_activation_times(filename_bin::String, n_points::Union{Nothing, Int})
+function parse_activation_times(filename_bin::String, n_points::Union{Nothing,Int})
 
     a = read_binary(filename_bin, Float32, (2, :))
     a = permutedims(a)
@@ -23,7 +23,7 @@ function parse_activation_times(filename_bin::String, n_points::Union{Nothing, I
     if isnothing(n_points)
         n_points = n_points_found
     elseif n_points ≠ n_points_found
-        @warn "n_points ≠ n_points_found\n$n_points ≠ $n_points_found" 
+        @warn "n_points ≠ n_points_found\n$n_points ≠ $n_points_found"
     end
 
     starts = map(i -> searchsortedfirst(vertices_sorted, i), 1:n_points)
@@ -99,10 +99,8 @@ function process_folder_bin(folder_bin::String, adj_matrix::SparseMatrixCSC)
             ]
             @info join(msg, "\n")
             n_points = size(adj_matrix, 1)
-            times, starts = parse_activation_times(
-                joinpath(folder_bin, filename_bin),
-                n_points
-            )
+            times, starts =
+                parse_activation_times(joinpath(folder_bin, filename_bin), n_points)
             write(filename_output_times, convert.(Float32, times))
             write(filename_output_starts, convert.(Int32, starts))
         end

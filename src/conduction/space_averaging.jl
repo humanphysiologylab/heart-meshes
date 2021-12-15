@@ -19,29 +19,35 @@ g = SimpleWeightedGraph(adj_matrix)
 
 using OrderedCollections
 
-arrays = Dict{String, Vector}()
+arrays = Dict{String,Vector}()
 
 multi_index = OrderedDict(
     "group" => 1:4,
     "period" => ("before", "after"),
-    "method" => ("percent", "binary")
+    "method" => ("percent", "binary"),
 )
 
 for index_values in Iterators.product(values(multi_index)...)
-    
+
     i_group, period, method = index_values
 
     folder_conduction = "/media/andrey/easystore/Rheeda/activation/conduction-mean/"
     conduction_sum = read_binary(
-        joinpath(folder_conduction, "M$heart_id-G$i_group-conduction-$method-$sum-$period-2500-ms.float64"),
-        Float64
+        joinpath(
+            folder_conduction,
+            "M$heart_id-G$i_group-conduction-$method-$sum-$period-2500-ms.float64",
+        ),
+        Float64,
     )
     conduction_count = read_binary(
-        joinpath(folder_conduction, "M$heart_id-G$i_group-conduction-$method-$count-$period-2500-ms.int64"),
-        Int64
+        joinpath(
+            folder_conduction,
+            "M$heart_id-G$i_group-conduction-$method-$count-$period-2500-ms.int64",
+        ),
+        Int64,
     )
-    wavebreak_mean = @. 1. - conduction_sum / conduction_count
-    @. wavebreak_mean[isnan(wavebreak_mean)] = 1.
+    wavebreak_mean = @. 1.0 - conduction_sum / conduction_count
+    @. wavebreak_mean[isnan(wavebreak_mean)] = 1.0
 
     key = "wavebreaks-M$heart_id-G$i_group-$period-$method"
     arrays[key] = wavebreak_mean
@@ -49,7 +55,8 @@ for index_values in Iterators.product(values(multi_index)...)
 end
 
 ##
-filename_mask_fibrosis = joinpath("/media/andrey/easystore/Rheeda", "M$heart_id", "mask_fibrosis.bool")
+filename_mask_fibrosis =
+    joinpath("/media/andrey/easystore/Rheeda", "M$heart_id", "mask_fibrosis.bool")
 arrays["fibrosis-density"] = read_binary(filename_mask_fibrosis, Bool)
 
 ##
@@ -113,11 +120,7 @@ columns = header[2:end]
 
 df_interp = DataFrame()
 for c in columns
-    v = sparsevec(
-        df[!, vertex_id_column],
-        df[!, c],
-        n_points
-    )
+    v = sparsevec(df[!, vertex_id_column], df[!, c], n_points)
     df_interp[!, c] = v[nearest_src]
 end
 

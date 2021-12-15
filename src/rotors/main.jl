@@ -1,14 +1,16 @@
 using ProgressMeter
 using SparseArrays
 
+include("../io/read_binary.jl")
+include("../misc/create_stops.jl")
+include("../io/load_adj_matrix.jl")
+
 ##
-include("read_binary.jl")
-
-
 i_heart = 13
 i_group = 2
 i_stim = string(13, pad = 2)
 
+##
 triplet = "M$i_heart/G$i_group/S$i_stim"
 folder_root = "/media/andrey/easystore/Rheeda/activation/"
 
@@ -30,6 +32,15 @@ if !all(isfile.(filenames))
     @warn "incomplete root!"
 end
 
+
+##
+folder_data = "/media/andrey/ssd2/WORK/HPL/Data/rheeda/activation"
+filename_times = joinpath(folder_data, "times.float32")
+filename_conduction = joinpath(folder_data, "conduction.float32")
+filename_starts = joinpath(folder_data, "indices_start.int32")
+
+##
+
 times = read_binary(filename_times, Float32)
 conduction = read_binary(filename_conduction, Float32)
 n_times = length(conduction)
@@ -39,10 +50,10 @@ stops = create_stops(starts, n_times)
 
 ##
 
-include("calculate_average_conduction.jl")
+include("../conduction/collect_counts_n_sums.jl")
 
 conduction_percent_sum, conduction_percent_count =
-    calculate_average_conduction(conduction, starts, stops)
+    collect_counts_n_sums(conduction, starts, stops)
 
 mask_nonzeros = .!iszero.(conduction_percent_count)
 
@@ -61,65 +72,83 @@ indices_breaks = convert.(Int32, indices_breaks)
 
 ##
 
-adj_matrix = load_adj_matrix("/media/andrey/ssd2/WORK/HPL/Data/rheeda/M$i_heart")
+adj_matrix = load_adj_matrix("/media/andrey/ssd2/WORK/HPL/Data/rheeda/M$i_heart/adj_matrix")
 
 ##
 
-# include("create_arrays_subsets.jl")
+include("create_arrays_subsets.jl")
 
-# starts_subset, stops_subset, times_subset = create_arrays_subsets(times, starts, indices_breaks)
-# adj_matrix_subset = adj_matrix[indices_breaks, indices_breaks]
-# rotor_ids, t_mins, t_maxs = find_rotors(times_subset, starts_subset, adj_matrix_subset)
+starts_breaks, stops_breaks, times_breaks =
+    create_arrays_subsets(times, starts, indices_breaks)
+adj_matrix_breaks = adj_matrix[indices_breaks, indices_breaks]
+
+##
+using Graphs
+g = SimpleGraph(adj_matrix_breaks)
+cc = connected_components(g)
+
+hist(log10.(length.(cc)), bins = 100)
+
+##
+
+starts_breaks_connected = typeof(starts_breaks)[]
+stops_breaks_connected = typeof(starts_breaks)[]
+times_breaks_connected = typeof(times_breaks)[]
+adj_matrix_breaks_connected = typeof(adj_matrix_breaks)[]
+indices_breaks_connected = typeof(indices_breaks)[]
+
+@showprogress for component in cc
+    if length(component) < 10
+        continue
+    end
+    indices = indices_breaks[component]
+    arrays = create_arrays_subsets(times, starts, indices)
+    push!(starts_breaks_connected, arrays.starts_subset)
+    push!(stops_breaks_connected, arrays.stops_subset)
+    push!(times_breaks_connected, arrays.times_subset)
+
+    push!(adj_matrix_breaks_connected, adj_matrix[indices, indices])
+    push!(indices_breaks_connected, indices)
+end
 
 ##
 include("find_rotors.jl")
 include("visit_breaks.jl")
 
-is_available = zeros(Bool, size(times))
-# is_available[1] = true
+i_component = findmax(length.(indices_breaks_connected))[2]
 
-times_min_breaks = zeros(length(indices_breaks))
+times_component = times_breaks_connected[i_component]
+starts_component = starts_breaks_connected[i_component]
+stops_component = stops_breaks_connected[i_component]
+adj_matrix_component = adj_matrix_breaks_connected[i_component]
 
-for (ii, i) in enumerate(indices_breaks)
-    is_available[starts[i]:stops[i]] .= true
-    # println(i)
-    @assert issorted(times[starts[i]:stops[i]-1])
-    times_min_breaks[ii] = times[starts[i]]
-end
+is_available_component = ones(Bool, size(times_component))
+# times_min_breaks = times[starts[indices_breaks]]
+
+# for i in indices_breaks
+#     is_available_component[starts[i]:stops[i]] .= true
+# end
+
+##
 
 rotor_ids, t_mins, t_maxs, indices_t_min = find_rotors(
+    times = times_component,
+    starts = starts_component,
+    stops = stops_component,
+    adj_matrix = adj_matrix_component,
+    dt_max = 20.0f0,
+    is_available = is_available_component,
+)
+
+
+##
+
+using ProfileView
+ProfileView.@profview rotor_ids, t_mins, t_maxs, indices_t_min = find_rotors(
     times = times,
     starts = starts,
     stops = stops,
     adj_matrix = adj_matrix,
     dt_max = 20.0f0,
     is_available = is_available,
-)
-
-indices_rotors = map(x -> searchsortedlast(starts, x), findall(x -> !iszero(x), rotor_ids))
-indices_t_min_vertices = map(x -> searchsortedlast(starts, x), indices_t_min)
-
-##
-setdiff(indices_rotors, indices_breaks)
-setdiff(indices_breaks, indices_rotors)
-
-setdiff(indices_t_min_vertices, indices_breaks)
-
-setdiff(indices_t_min_vertices, indices_rotors)
-@show isdisjoint(indices_rotors, indices_t_min_vertices)
-
-
-
-##
-is_visited = zeros(Bool, size(is_available))
-
-visit_breaks(
-    i_point,
-    times = times,
-    is_available = is_available,
-    is_visited = is_visited,
-    starts = starts,
-    stops = stops,
-    adj_matrix = adj_matrix,
-    dt_max = 30.0f0,
 )

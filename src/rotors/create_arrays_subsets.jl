@@ -1,45 +1,35 @@
 function create_arrays_subsets(
     times::Vector{F},
-    starts::Vector{U},
-    indices_subset::Vector{U},
+    starts,#::Vector{U},
+    indices_subset,#::Vector{U},
 ) where {F<:AbstractFloat} where {U<:Integer}
 
-    n_subset = length(indices_subset)
-
     n_times = length(times)
+    n_subset = length(indices_subset)
     stops = create_stops(starts, n_times)
 
     starts_subset_native = starts[indices_subset]
     stops_subset_native = stops[indices_subset]
 
-    starts_subset = zeros(U, n_subset)
-    stops_subset = zeros(U, n_subset)
-
+    lengths_subset = @. stops_subset_native - starts_subset_native + 1
+    stops_subset = cumsum(lengths_subset)
+    starts_subset = similar(stops_subset)
+    starts_subset[2:end] = stops_subset[1:end-1] .+ 1
     starts_subset[1] = 1
-    stops_subset[1] = stops_subset_native[1] - starts_subset_native[1] + 1
 
-    n_times_subset = sum(stops_subset_native .- starts_subset_native) + 1
+    n_times_subset = sum(lengths_subset)
     times_subset = zeros(F, n_times_subset)
 
-    start_cumulative = 1
+    @assert n_subset == length(stops_subset) == length(starts_subset)
 
-    for (i, (start, stop)) in enumerate(zip(starts_subset_native, stops_subset_native))
-
-        r_native = start:stop
-
-        start_subset = start_cumulative
-        stop_subset = start_cumulative + (stop - start)
-        r_subset = start_subset:stop_subset
-
-        starts_subset[i] = start_subset
-        stops_subset[i] = stop_subset
-
-        times_subset[r_subset] = times[r_native]
-
-        start_cumulative = stop_subset
-
+    @inbounds @simd for i = 1:n_subset
+        start = starts_subset_native[i]
+        stop = stops_subset_native[i]
+        start_subset = starts_subset[i]
+        stop_subset = stops_subset[i]
+        times_subset[start_subset:stop_subset] = times[start:stop]
     end
 
-    return starts_subset, stops_subset, times_subset
+    return (; starts_subset, stops_subset, times_subset)
 
 end
