@@ -1,6 +1,7 @@
 using ProgressMeter
+using Statistics
 
-include("../src/read_binary.jl")
+include("../io/read_binary.jl")
 
 i_heart = 13
 i_group = 2
@@ -37,7 +38,7 @@ stops = similar(starts)
 @views stops[1:end-1] = starts[2:end] .- 1
 stops[end] = n_times
 
-times_save_stop = vcat([300, 580, 840, 1080, 1300], collect(1500:200:7500-200))
+times_save_stop = vcat([300, 580, 840, 1080, 1300], collect(1500:200:7500))
 
 times_save_start = times_save_stop .- 500
 clamp!(times_save_start, 0, 7500)

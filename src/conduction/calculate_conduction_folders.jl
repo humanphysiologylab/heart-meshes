@@ -38,12 +38,87 @@ function parse_activation_times(filename_bin::String, n_points::Union{Nothing,In
 end
 
 
+function process_filename_bin(
+    filename_bin::String,
+    adj_matrix::SparseMatrixCSC,
+    folders_output::NamedTuple,
+)
+
+    stim_prefix = chop(basename(filename_bin), tail = length(".bin"))
+
+    folder_output_light = folders_output.light
+    folder_output_results = folders_output.results
+
+    folder_output_light_stim = joinpath(folder_output_light, stim_prefix)
+    if isdir(folder_output_light_stim)
+        @info "$folder_output_light_stim exists"
+    else
+        mkdir(folder_output_light_stim)
+    end
+
+    folder_output_results_stim = joinpath(folder_output_results, stim_prefix)
+    if isdir(folder_output_results_stim)
+        @info "$folder_output_results_stim exists"
+    else
+        mkdir(folder_output_results_stim)
+    end
+
+    filename_output_conduction = joinpath(folder_output_results_stim, "conduction.float32")
+
+    if isfile(filename_output_conduction)
+        @info "$filename_output_conduction found, EXIT..."
+        return
+    end
+
+    filename_output_starts = joinpath(folder_output_light_stim, "indices_start.int32")
+    filename_output_times = joinpath(folder_output_light_stim, "times.float32")
+
+    if all(isfile.([filename_output_times, filename_output_starts]))
+        @info "$filename_output_times and $filename_output_starts are exist"
+        times = read_binary(filename_output_times, Float32)
+        starts = read_binary(filename_output_starts, Int32)
+    else
+        msg = [
+            "$stim_prefix is not complete",
+            "\tcreating:",
+            "\t$filename_output_starts",
+            "\t$filename_output_times",
+        ]
+        @info join(msg, "\n")
+        n_points = size(adj_matrix, 1)
+        times, starts = parse_activation_times(filename_bin, n_points)
+        write(filename_output_times, convert.(Float32, times))
+        write(filename_output_starts, convert.(Int32, starts))
+    end
+
+    @assert n_points == length(starts)
+
+    conduction_percent = fill(NaN32, size(times))
+    dt_max = 10.0
+
+    calculate_conduction_map(
+        adj_matrix,
+        times,
+        starts,
+        dt_max = dt_max,
+        output_prealloc = conduction_percent,
+    )
+
+    write(filename_output_conduction, convert.(Float32, conduction_percent))
+
+    @info "$filename_output_conduction is done!"
+
+end
+
+
 function process_folder_bin(folder_bin::String, adj_matrix::SparseMatrixCSC)
 
     folder_prefix = chop(folder_bin, tail = length("_bin"))
 
     folder_output_light = folder_prefix * "_light"
     folder_output_results = folder_prefix * "_results"
+
+    folders_output = (light = folder_output_light, results = folder_output_results)
 
     for folder in (folder_output_light, folder_output_results)
         if !isdir(folder)
@@ -59,68 +134,7 @@ function process_folder_bin(folder_bin::String, adj_matrix::SparseMatrixCSC)
             continue
         end
 
-        stim_prefix = chop(filename_bin, tail = length(".bin"))
-
-        folder_output_light_stim = joinpath(folder_output_light, stim_prefix)
-        if isdir(folder_output_light_stim)
-            @info "$folder_output_light_stim exists"
-        else
-            mkdir(folder_output_light_stim)
-        end
-
-        folder_output_results_stim = joinpath(folder_output_results, stim_prefix)
-        if isdir(folder_output_results_stim)
-            @info "$folder_output_results_stim exists"
-        else
-            mkdir(folder_output_results_stim)
-        end
-
-        filename_output_conduction =
-            joinpath(folder_output_results_stim, "conduction.float32")
-
-        if isfile(filename_output_conduction)
-            @info "$filename_output_conduction found, continue..."
-            continue
-        end
-
-        filename_output_starts = joinpath(folder_output_light_stim, "indices_start.int32")
-        filename_output_times = joinpath(folder_output_light_stim, "times.float32")
-
-        if all(isfile.([filename_output_times, filename_output_starts]))
-            @info "$filename_output_times and $filename_output_starts are exist"
-            times = read_binary(filename_output_times, Float32)
-            starts = read_binary(filename_output_starts, Int32)
-        else
-            msg = [
-                "$stim_prefix is not complete",
-                "\tcreating:",
-                "\t$filename_output_starts",
-                "\t$filename_output_times",
-            ]
-            @info join(msg, "\n")
-            n_points = size(adj_matrix, 1)
-            times, starts =
-                parse_activation_times(joinpath(folder_bin, filename_bin), n_points)
-            write(filename_output_times, convert.(Float32, times))
-            write(filename_output_starts, convert.(Int32, starts))
-        end
-
-        @assert n_points == length(starts)
-
-        conduction_percent = fill(NaN32, size(times))
-        dt_max = 10.0
-
-        calculate_conduction_map(
-            adj_matrix,
-            times,
-            starts,
-            dt_max = dt_max,
-            output_prealloc = conduction_percent,
-        )
-
-        write(filename_output_conduction, convert.(Float32, conduction_percent))
-
-        @info "$filename_output_conduction is done!"
+        process_filename_bin(joinpath(folder_bin, filename_bin), adj_matrix, folders_output)
 
     end
 

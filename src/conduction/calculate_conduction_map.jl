@@ -29,7 +29,9 @@ function calculate_conduction_map(
             start_i, stop_i = starts[i], stops[i]
             times_i = @view times[start_i:stop_i]
 
-            for (index_time_i, time_i) in enumerate(times_i)
+            for (index_time_i, time_i) in enumerate(times_i[1:end-1])
+                # `[1: end - 1]` is because of the last beat leading to the wavebreak
+                # all over the wavefront, so I will ommit the last beat
 
                 indices_neighbours = @view rows[nzrange(adj_matrix, i)]
                 n_neighbours = length(indices_neighbours)

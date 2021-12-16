@@ -1,64 +1,73 @@
 using SparseArrays
+using ProgressMeter
+
 include("visit_breaks.jl")
+include("structs.jl")
 
 
-function find_rotors(;
-    times::Vector{F},
-    starts::Vector{U},
-    stops::Vector{U},
-    adj_matrix::SparseMatrixCSC,
-    dt_max::F,
-    is_available::Vector{Bool},
-) where {F<:AbstractFloat} where {U<:Integer}
+function find_moving_breaks(
+    act_graph::ActivatedGraph;
+    dt_max::AbstractFloat,
+    is_available::Union{Vector{Bool},Nothing} = nothing,
+)
 
-    n_points = convert(U, length(starts))
-    n_times = convert(U, length(times))
+    n_points = length(act_graph.starts)
+    n_times = length(act_graph.times)
 
-    rotor_ids = zeros(U, n_times)
+    ids = zeros(Int, n_times)
     is_visited = zeros(Bool, n_times)
-    t_mins = F[]
-    t_maxs = F[]
-    indices_t_min = U[]
-    linear_range = UnitRange(one(U), n_times)
 
-    rotor_id::U = 0
+    t_mins = Float64[]
+    t_maxs = Float64[]
 
-    n_available = sum(is_available)
+    linear_range = 1:n_times
+
+    if isnothing(is_available)
+        is_available = ones(Bool, size(act_graph.times))
+    end
+
+    rotor_id = 0
+    n_visited = 0
 
     while any(is_available)
 
         rotor_id += 1
-        # @show rotor_id
 
-        t_min, index_t_min_available = findmin(times[is_available])
+        t_min, index_t_min_available = findmin(act_graph.times[is_available])
         index_t_min = linear_range[is_available][index_t_min_available]
 
-        visit_breaks(
+        n_visited = visit_breaks(
             index_t_min,
-            times = times,
+            act_graph = act_graph,
             is_available = is_available,
             is_visited = is_visited,
-            starts = starts,
-            stops = stops,
-            adj_matrix = adj_matrix,
             dt_max = dt_max,
         )
 
-        t_max = findmax(times[is_visited])[1]
+        t_max = findmax(act_graph.times[is_visited])[1]
         push!(t_mins, t_min)
         push!(t_maxs, t_max)
-        push!(indices_t_min, index_t_min)
 
-        rotor_ids[is_visited] .= rotor_id
+        ids[is_visited] .= rotor_id
         is_available[is_visited] .= false
         is_visited[is_visited] .= false
 
-        # if rotor_id == 100
-        #     break
-        # end
-
     end
 
-    return (; rotor_ids, t_mins, t_maxs, indices_t_min)
+    return (; ids, t_mins, t_maxs)
+
+end
+
+
+function find_moving_breaks(act_graphs::Vector{ActivatedGraph}, dt_max::AbstractFloat)
+
+    result = []
+
+    @showprogress for ag in act_graphs
+        rotors = find_moving_breaks(ag, dt_max = dt_max)
+        push!(result, rotors)
+    end
+
+    return result
 
 end
