@@ -23,7 +23,7 @@ function find_moving_breaks(
     linear_range = 1:n_times
 
     if isnothing(is_available)
-        is_available = ones(Bool, size(act_graph.times))
+        is_available = ones(Bool, n_times)
     end
 
     rotor_id = 0
@@ -49,8 +49,8 @@ function find_moving_breaks(
         push!(t_maxs, t_max)
 
         ids[is_visited] .= rotor_id
-        is_available[is_visited] .= false
-        is_visited[is_visited] .= false
+        # is_available[is_visited] .= false
+        is_visited[is_visited] .= false  # reset
 
     end
 

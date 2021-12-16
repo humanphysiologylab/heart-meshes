@@ -1,5 +1,6 @@
 using DataStructures
 using SparseArrays
+using UnPack: @unpack
 
 include("structs.jl")
 
@@ -21,13 +22,15 @@ function visit_breaks(
 
     q = Queue{Tuple{Integer,AbstractFloat}}()  # (vertex, time)
 
-    v = searchsortedlast(act_graph.starts, index_times_start)
+    @unpack starts, stops, times, adj_matrix = act_graph
+
+    v = searchsortedlast(starts, index_times_start)
     t_v = act_graph.times[index_times_start]
     @debug "vertex start is $v with time $t_v"
 
     enqueue!(q, (v, t_v))
 
-    rows = rowvals(act_graph.adj_matrix)
+    rows = rowvals(adj_matrix)
 
     n_visited = 0
 
@@ -36,17 +39,17 @@ function visit_breaks(
         v, t_v = dequeue!(q)
         @debug "dequeue: $v, $t_v"
 
-        neighbours = @view rows[nzrange(act_graph.adj_matrix, v)]
+        neighbours = @view rows[nzrange(adj_matrix, v)]
         @debug "neighbours: $neighbours"
 
         for u in neighbours
 
-            start_u, stop_u = act_graph.starts[u], act_graph.stops[u]
+            start_u, stop_u = starts[u], stops[u]
             for index_t_u = start_u:stop_u
 
                 !is_available[index_t_u] && continue
 
-                t_u = act_graph.times[index_t_u]
+                t_u = times[index_t_u]
                 dt = abs(t_u - t_v)
                 if dt < dt_max
                     is_available[index_t_u] = false

@@ -16,9 +16,10 @@ include("structs.jl")
 ##
 i_heart = 13
 adj_matrix = load_adj_matrix("/media/andrey/ssd2/WORK/HPL/Data/rheeda/M$i_heart/adj_matrix")
+adj_matrix = convert(SparseMatrixCSC{Bool, Int}, adj_matrix)
 
 ##
-i_group = 1
+i_group = 2
 i_stim = string(13, pad = 2)
 
 ##
@@ -49,13 +50,13 @@ end
 ##
 
 act_times = ActivationTimes(
-    read_binary(filename_starts, Int32),
-    read_binary(filename_times, Float32),
+    convert.(Int, read_binary(filename_starts, Int32)),
+    convert.(Float64, read_binary(filename_times, Float32)),
 )
 
 ##
 
-conduction = read_binary(filename_conduction, Float32)
+conduction = convert.(Float64, read_binary(filename_conduction, Float32))
 conduction[act_times.stops] .= 1
 
 conduction_percent_sum, conduction_percent_count =
@@ -69,7 +70,6 @@ conduction_percent_mean[mask_nonzeros] =
 
 conduction_threshold = 0.95
 indices_breaks = findall(conduction_percent_mean .< conduction_threshold)
-# indices_breaks = convert.(Int32, indices_breaks)
 
 ##
 
@@ -85,10 +85,11 @@ cc = connected_components(SimpleGraph(adj_matrix_breaks))
 
 act_graphs = ActivatedGraph[]
 indices_breaks_connected = typeof(indices_breaks)[]
+component_size_min = 42
 
 for component in cc
 
-    if length(component) < 42
+    if length(component) < component_size_min
         continue
     end
 
@@ -111,7 +112,7 @@ moving_breaks = find_moving_breaks(act_graphs, 20.0)
 ##
 
 t_threshold = 1000.0
-rotors = Rotor[]
+rotors = []
 
 for (i, (ids, t_mins, t_maxs)) in enumerate(moving_breaks)
 
@@ -128,8 +129,12 @@ for (i, (ids, t_mins, t_maxs)) in enumerate(moving_breaks)
     # times_indices = 1: length(act_times.times)
     # indices_times = times_indices[indices_times_local] 
 
-    r = Rotor(lifetime_max, indices_points, Int[])
-    @show lifetime_max
+    r = Dict(
+        "lifetime" => lifetime_max,
+        "t_start" => t_mins[id_lifetime_max],
+        "indices_points" => indices_points
+    )
+    @show i, lifetime_max, t_mins[id_lifetime_max]
 
     push!(rotors, r)
 
@@ -143,128 +148,72 @@ write("./tmp/result.json", json(result))
 
 ##
 
-t_live_maxima = (rotors.t_maxs - rotors.t_mins) .|> findmax .|> first
-indices_rotors = findall(t_live_maxima .> t_threshold)
-
-@info "$(length(indices_rotors)) rotors found"
-
-result = Dict{String,Any}()
-result["rotors"] = []
-
-for i in indices_rotors
-    t_mins = rotors.t_mins[i]
-    t_maxs = rotors.t_maxs[i]
-    t_live = t_maxs - t_mins
-    t_live_max, i_t_live_max = findmax(t_live)
-    # ids_t_live_max = rotors.ids[i][i_t_live_max]
-    indices_rotor = indices_breaks_connected[i]
-
-    result_dict = Dict("t_live" => t_live_max, "indices_rotor" => indices_rotor)
-
-    push!(result["rotors"], deepcopy(result_dict))
-
-end
-
-result["components"] = indices_breaks_connected
-
-##
-
-using JSON
-
-write("./tmp/result.json", json(result))
-
-##
 
 
 
-
-
-
-
-
-
-
-
-
-
-##
-
-i_component = findmax(length.(indices_breaks_connected))[2]
-
-times_component = times_breaks_connected[i_component]
-starts_component = starts_breaks_connected[i_component]
-stops_component = stops_breaks_connected[i_component]
-adj_matrix_component = adj_matrix_breaks_connected[i_component]
-
-is_available_component = ones(Bool, size(times_component))
-# times_min_breaks = times[starts[indices_breaks]]
-
-# for i in indices_breaks
-#     is_available_component[starts[i]:stops[i]] .= true
-# end
-
-
-##
-
-rotors = find_rotors(
-    times = times_component,
-    starts = starts_component,
-    stops = stops_component,
-    adj_matrix = adj_matrix_component,
-    dt_max = 20.0f0,
-    is_available = is_available_component,
-)
-
-##
-
-using ProfileView
-ProfileView.@profview rotor_ids, t_mins, t_maxs, indices_t_min = find_rotors(
-    times = times_component,
-    starts = starts_component,
-    stops = stops_component,
-    adj_matrix = adj_matrix_component,
-    dt_max = 20.0f0,
-    is_available = is_available_component,
-)
-
-
-##
-
-using Profile
-
-@profile for i = 1:3
-    find_rotors(
-        times = times_component,
-        starts = starts_component,
-        stops = stops_component,
-        adj_matrix = adj_matrix_component,
-        dt_max = 20.0f0,
-        is_available = ones(Bool, size(times_component)),
-    )
-end
-
-##
-
-using BenchmarkTools
-
-@benchmark find_rotors(
-    times = times_component,
-    starts = starts_component,
-    stops = stops_component,
-    adj_matrix = adj_matrix_component,
-    dt_max = 20.0f0,
-    is_available = ones(Bool, size(times_component)),
-)
-
-##
+###
 
 open("./tmp/profile.txt", "w") do s
     Profile.print(
         IOContext(s, :displaysize => (24, 500)),
-        format = :flat,
-        sortedby = :count,
+        # format = :flat,
+        # sortedby = :count,
     )
 end
 
 
 ##
+using ProfileView
+
+ag = act_graphs[1]
+is_available = ones(Bool, length(ag.times))
+is_visited = zeros(Bool, length(ag.times))
+
+# ProfileView.@profile \
+n_visited = visit_breaks(
+    1,
+    act_graph = ag,
+    is_available = is_available,
+    is_visited = is_visited,
+    dt_max = 20.,
+)
+
+##
+
+is_available = ones(Bool, length(ag.times))
+is_visited = zeros(Bool, length(ag.times))
+
+ProfileView.@profview visit_breaks(1, act_graph = ag, is_available = is_available, is_visited = is_visited, dt_max = 20.)
+
+##
+
+report = []
+
+@time for ag in act_graphs
+
+    is_available = ones(Bool, length(ag.times))
+    is_visited = zeros(Bool, length(ag.times))
+
+    t = time()
+
+    # n_visited = visit_breaks(
+    #     1,
+    #     act_graph = ag,
+    #     is_available = is_available,
+    #     is_visited = is_visited,
+    #     dt_max = 20.,
+    # )
+
+    find_moving_breaks(ag, dt_max=20.)
+
+    t = time() - t
+
+    push!(
+        report,
+        Dict(
+            "time" => t,
+            "len_a" => size(ag.adj_matrix, 1),
+            "len_t" => size(ag.times)
+        )
+    )
+end
