@@ -16,16 +16,16 @@ include("structs.jl")
 ##
 
 i_heart = 15
-adj_matrix = load_adj_matrix("/media/andrey/ssd2/WORK/HPL/Data/rheeda/M$i_heart/adj_matrix")
+adj_matrix = load_adj_matrix("/media/hpl_user/easystore/Rheeda/M$i_heart/adj_matrix")
 adj_matrix = convert(SparseMatrixCSC{Bool,Int}, adj_matrix)
 
-i_group = 1
+i_group = 3
 t_threshold = 1000.0
 dt_max = 20.0
 component_size_min = 42
 conduction_threshold = 0.95
 
-folder_root = "/media/andrey/easystore/Rheeda/activation/"
+folder_root = "/media/hpl_user/easystore/Rheeda/activation/"
 folder_rotors = joinpath(folder_root, "rotors/jsons")
 
 n_folders = 40
@@ -52,9 +52,15 @@ for i_stim_number = 0:n_folders-1
 
     filename_conduction = joinpath(folder_results, "conduction.float32")
 
-    filenames = filename_starts, filename_times, filename_conduction
-    if !all(isfile.(filenames))
-        @warn "incomplete root: $folder_data"
+    is_incomplete = false
+    for filename in (filename_starts, filename_times, filename_conduction)
+        if !isfile(filename)
+            @warn "missing: $filename"
+            is_incomplete = true
+        end
+    end
+
+    if is_incomplete
         continue
     end
 
@@ -64,7 +70,7 @@ for i_stim_number = 0:n_folders-1
     )
 
     conduction = convert.(Float64, read_binary(filename_conduction, Float32))
-    conduction[act_times.stops] .= 1
+    conduction[act_times.stops[act_times.stops .>= act_times.starts]] .= 1
 
     conduction_percent_sum, conduction_percent_count =
         collect_counts_n_sums(conduction, act_times.starts, act_times.stops)
