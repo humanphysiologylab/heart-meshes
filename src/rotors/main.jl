@@ -16,7 +16,7 @@ include("structs.jl")
 ##
 i_heart = 13
 adj_matrix = load_adj_matrix("/media/andrey/ssd2/WORK/HPL/Data/rheeda/M$i_heart/adj_matrix")
-adj_matrix = convert(SparseMatrixCSC{Bool, Int}, adj_matrix)
+adj_matrix = convert(SparseMatrixCSC{Bool,Int}, adj_matrix)
 
 ##
 i_group = 2
@@ -132,7 +132,7 @@ for (i, (ids, t_mins, t_maxs)) in enumerate(moving_breaks)
     r = Dict(
         "lifetime" => lifetime_max,
         "t_start" => t_mins[id_lifetime_max],
-        "indices_points" => indices_points
+        "indices_points" => indices_points,
     )
     @show i, lifetime_max, t_mins[id_lifetime_max]
 
@@ -175,7 +175,7 @@ n_visited = visit_breaks(
     act_graph = ag,
     is_available = is_available,
     is_visited = is_visited,
-    dt_max = 20.,
+    dt_max = 20.0,
 )
 
 ##
@@ -183,7 +183,13 @@ n_visited = visit_breaks(
 is_available = ones(Bool, length(ag.times))
 is_visited = zeros(Bool, length(ag.times))
 
-ProfileView.@profview visit_breaks(1, act_graph = ag, is_available = is_available, is_visited = is_visited, dt_max = 20.)
+ProfileView.@profview visit_breaks(
+    1,
+    act_graph = ag,
+    is_available = is_available,
+    is_visited = is_visited,
+    dt_max = 20.0,
+)
 
 ##
 
@@ -204,16 +210,12 @@ report = []
     #     dt_max = 20.,
     # )
 
-    find_moving_breaks(ag, dt_max=20.)
+    find_moving_breaks(ag, dt_max = 20.0)
 
     t = time() - t
 
     push!(
         report,
-        Dict(
-            "time" => t,
-            "len_a" => size(ag.adj_matrix, 1),
-            "len_t" => size(ag.times)
-        )
+        Dict("time" => t, "len_a" => size(ag.adj_matrix, 1), "len_t" => size(ag.times)),
     )
 end

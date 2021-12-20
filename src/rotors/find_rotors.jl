@@ -63,7 +63,7 @@ function find_moving_breaks(act_graphs::Vector{ActivatedGraph}, dt_max::Abstract
 
     result = []
 
-    @showprogress for ag in act_graphs
+    for ag in act_graphs
         rotors = find_moving_breaks(ag, dt_max = dt_max)
         push!(result, rotors)
     end
