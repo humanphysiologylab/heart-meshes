@@ -8,7 +8,6 @@ filename_region = joinpath(folder, "M15_IRC_region.int32")
 region = read_binary(filename_region, Int32)
 
 ##
-
 using StatsBase
 v_counts = countmap(region)
 
@@ -120,3 +119,13 @@ open(filename_weights, "w") do f
 end
 
 ##
+
+
+filename_region = "/media/andrey/ssd2/WORK/HPL/Data/rheeda/M15/M15_IRC_points_region.bool"
+region = read_binary(filename_region, Bool, (4, :))
+fibrosis_ids = [32, 128]
+mask_fibrosis = region .∈ Ref(fibrosis_ids)
+
+# write("/media/andrey/ssd2/WORK/HPL/Data/rheeda/M15/mask_fibrosis.bool", collect(mask_fibrosis))
+
+# mask_fibrosis = reduce(.|, eachrow(region[[1, 3], :]))

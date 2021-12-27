@@ -70,7 +70,7 @@ for i_stim_number = 0:n_folders-1
     )
 
     conduction = convert.(Float64, read_binary(filename_conduction, Float32))
-    conduction[act_times.stops[act_times.stops .>= act_times.starts]] .= 1
+    conduction[act_times.stops[act_times.stops.>=act_times.starts]] .= 1
 
     conduction_percent_sum, conduction_percent_count =
         collect_counts_n_sums(conduction, act_times.starts, act_times.stops)

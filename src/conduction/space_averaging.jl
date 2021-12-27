@@ -8,10 +8,10 @@ include("../io/read_binary.jl")
 include("../io/load_adj_matrix.jl")
 
 ##
-heart_id = 15
+heart_id = 13
 ##
 
-folder = joinpath("/media/andrey/easystore/Rheeda", "M$heart_id", "adj_matrix")
+folder = joinpath("/media/andrey/ssd2/WORK/HPL/Data/rheeda", "M$heart_id", "adj_matrix")
 adj_matrix = load_adj_matrix(folder, false)
 g = SimpleWeightedGraph(adj_matrix)
 
@@ -105,18 +105,32 @@ close(file_csv)
 ##
 using DelimitedFiles, DataFrames
 
-# filename_csv = joinpath(folder_save, "M15-all-r1e4-srcs.csv")
+folder_save = "../../data/rotors/"
+# filename_csv = joinpath(folder_save, "M13-all-r1e4-srcs.csv")
+filename_csv = joinpath(folder_save, "M13-FE-r1e4-srcs.csv")
+
 data, header = readdlm(filename_csv, ',', Float64, header = true)
 
 df = DataFrame(data, vec(header))
 unique!(df)
+
+vertex_id_column = :vertex_id
 df[!, vertex_id_column] = convert.(Int, df[!, vertex_id_column])
+##
+
+# using CSV
+
+# df = DataFrame(CSV.File("../../data/rotors/M13-FE-r1e4-srcs.csv"))
 
 ##
 ds = dijkstra_many_sourses(g, df[!, vertex_id_column])
 nearest_src = ds.parents
 
-columns = header[2:end]
+columns = ("fibrosis-entropy",)
+# columns = header[2:end]
+n_points = size(adj_matrix, 1)
+
+## 
 
 df_interp = DataFrame()
 for c in columns

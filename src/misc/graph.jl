@@ -104,3 +104,68 @@ function dijkstra_many_sourses(
 
     return DijkstraState{T,U}(nearest_src, dists, preds, pathcounts, nearest_src)
 end
+
+
+function dijkstra_many_sourses_v2(
+    g::AbstractGraph,
+    srcs::Vector{U},
+    distmx::AbstractMatrix{T} = weights(g),
+) where {T<:Real} where {U<:Integer}
+
+    nvg = nv(g)
+
+    dists = fill(typemax(T), nvg)
+    parents = zeros(U, nvg)
+    visited = zeros(Bool, nvg)
+    nearest_src = zeros(U, nvg)
+    adj_matrix_srcs = spzeros(Bool, nvg, nvg)
+
+    H = PriorityQueue{U,T}()
+
+    for src in srcs
+        dists[src] = zero(T)
+        visited[src] = true
+        H[src] = zero(T)
+
+        nearest_src[src] = src
+    end
+
+    while !isempty(H)
+
+        u = dequeue!(H)
+        d = dists[u]
+
+        for v in outneighbors(g, u)
+
+            alt = d + distmx[u, v]
+
+            if visited[v]
+
+                if alt < dists[v]
+                    nearest_src[v] = nearest_src[u]
+                    dists[v] = alt
+                    parents[v] = u
+                    H[v] = alt
+                else
+                    u_src, v_src = nearest_src[u], nearest_src[v]
+                    adj_matrix_srcs[u_src, v_src] = true
+                end
+
+            else
+
+                visited[v] = true
+                dists[v] = alt
+                parents[v] = u
+                nearest_src[v] = nearest_src[u]
+                H[v] = alt
+
+            end
+        end
+    end
+
+    preds = Vector{Vector{U}}()
+    pathcounts = Vector{T}()
+
+    return DijkstraState{T,U}(nearest_src, dists, preds, pathcounts, nearest_src),
+    adj_matrix_srcs
+end

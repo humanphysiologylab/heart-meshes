@@ -9,7 +9,7 @@ include("../io/load_adj_matrix.jl")
 include("entropy.jl")
 
 ##
-heart_id = 15
+heart_id = 13
 
 ##
 folder_data = "/media/andrey/ssd2/WORK/HPL/Data/rheeda/"
@@ -19,8 +19,7 @@ adj_matrix = load_adj_matrix(folder, false)
 g = SimpleWeightedGraph(adj_matrix)
 
 ##
-filename_mask_fibrosis =
-    joinpath(folder_data, "M$heart_id", "mask_fibrosis.bool")
+filename_mask_fibrosis = joinpath(folder_data, "M$heart_id", "mask_fibrosis.bool")
 mask_fibrosis = read_binary(filename_mask_fibrosis, Bool)
 
 probas = calculate_FE_probas(adj_matrix .> 0.0, mask_fibrosis)
@@ -60,16 +59,12 @@ file_csv = open(filename_csv, "a");
     ps = @view probas[neighbours]
     fe = calculate_entropy(ps) / n_points_area
 
-    write(
-        file_csv,
-        join(
-            map(string, [vertex_id, fe]),
-            ","
-        )
-    )
+    write(file_csv, join(map(string, [vertex_id, fe]), ","))
     write(file_csv, "\n")
     flush(file_csv)
 
 end
 
 close(file_csv)
+
+##
