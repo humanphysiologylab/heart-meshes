@@ -2,60 +2,71 @@ using DataStructures
 using SparseArrays
 using UnPack: @unpack
 
-include("structs.jl")
+include("./ActivatedGraphs.jl")
+using .ActivatedGraphs
 
 
-function visit_breaks(
+function visit_breaks!(
     index_times_start::Integer;  # index for the `times` and `is_available`
-    act_graph::ActivatedGraph,
-    is_available::Vector{Bool},
-    is_visited::Vector{Bool},
+    g::ActivatedGraph{T},
     dt_max::AbstractFloat,
-)::Integer
+)::Int where {T}
 
-    if !is_available[index_times_start]
-        error()
+    any((:times, :conduction) .∉ (keys(g.arrays),)) &&
+        error("times and conduction are required")
+    (g[:conduction][index_times_start] == 1) &&
+        error("trajectory must start on the break (conduction < 1)")
+
+    q = Queue{Tuple{T,T}}()  # (i_vertex, i_time)
+
+    v = find_vertex_id(g, index_times_start)
+    enqueue!(q, (v, index_times_start))
+
+    keys_in_arrays = (:parents, :lifetime) .∈ (keys(g.arrays),)
+
+    if !any(keys_in_arrays)
+        @info "creating parents and lifetime"
+        g[:parents] = zeros(T, g.len_array)
+        g[:lifetime] = zeros(g.len_array)
+    elseif any(keys_in_arrays) && !all(keys_in_arrays)
+        error("invalid arrays: $(keys(g.arrays))")
+    elseif g[:parents][index_times_start] == -1
+        @warn "start is already discovered as root"
+        return 0
+    elseif g[:parents][index_times_start] ≠ 0
+        @warn "start is already discovered as intermediate"
+        return 0
     end
 
-    is_available[index_times_start] = false
-    is_visited[index_times_start] = true
-
-    q = Queue{Tuple{Integer,AbstractFloat}}()  # (vertex, time)
-
-    @unpack starts, stops, times, adj_matrix = act_graph
-
-    v = searchsortedlast(starts, index_times_start)
-    t_v = act_graph.times[index_times_start]
-    @debug "vertex start is $v with time $t_v"
-
-    enqueue!(q, (v, t_v))
-
-    rows = rowvals(adj_matrix)
+    g[:parents][index_times_start] = -1  # root
 
     n_visited = 0
 
     while !isempty(q)
 
-        v, t_v = dequeue!(q)
-        @debug "dequeue: $v, $t_v"
+        v, i_t_v = dequeue!(q)
+        t_v = g[:times][i_t_v]
+        @debug "dequeue: $v, $i_t_v ($t_v)"
 
-        neighbours = @view rows[nzrange(adj_matrix, v)]
-        @debug "neighbours: $neighbours"
+        v_neighbors = neighbors(g, v)
+        @debug "v_neighbors: $v_neighbors"
 
-        for u in neighbours
+        for u in v_neighbors
 
-            start_u, stop_u = starts[u], stops[u]
-            for index_t_u = start_u:stop_u
+            for i_t_u = g.starts[u]:g.stops[u]
 
-                !is_available[index_t_u] && continue
+                (g[:parents][i_t_u] ≠ 0) && continue  # already visited
 
-                t_u = times[index_t_u]
-                dt = abs(t_u - t_v)
-                if dt < dt_max
-                    is_available[index_t_u] = false
-                    is_visited[index_t_u] = true
-                    enqueue!(q, (u, t_u))
-                    @debug "enqueue: $u, $t_u"
+                c_u = g[:conduction][i_t_u]
+                ((c_u == 1) || (isnan(c_u))) && continue  # not break or the last beat
+
+                t_u = g[:times][i_t_u]
+                dt = t_u - t_v
+                if dt < dt_max  # forward evolution
+                    g[:parents][i_t_u] = i_t_v
+                    g[:lifetime][i_t_u] = g[:lifetime][i_t_v] + dt
+                    enqueue!(q, (u, i_t_u))
+                    @debug "enqueue: $u, $i_t_u ($t_u)"
                     n_visited += 1
                 end
 
