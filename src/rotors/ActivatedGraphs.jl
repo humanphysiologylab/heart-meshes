@@ -1,6 +1,6 @@
 module ActivatedGraphs
 
-using Graphs, SparseArrays
+using SimpleWeightedGraphs, SparseArrays
 import Base: getindex, setindex!
 import Graphs: neighbors, nv
 
@@ -11,7 +11,7 @@ export ActivatedGraph,
 
 
 struct ActivatedGraph{T<:Integer}
-    graph::SimpleGraph{T}
+    graph::SimpleWeightedGraph{T}
     starts::Vector{T}
     stops::Vector{T}
     arrays::Dict{Symbol,Vector}
@@ -19,7 +19,7 @@ struct ActivatedGraph{T<:Integer}
     type_array::DataType
 
     function ActivatedGraph(
-        graph::SimpleGraph{T},
+        graph::SimpleWeightedGraph{T},
         starts::Vector{T},
         arrays::Dict{Symbol,<:Vector},
     ) where {T<:Integer}
@@ -39,20 +39,23 @@ end
 
 
 function ActivatedGraph(
-    adj_matrix::SparseMatrixCSC,
+    adj_matrix::SparseMatrixCSC{F, T},
     starts::Vector{T},
     arrays::Dict{Symbol,<:Vector},
-) where {T<:Integer}
-    ActivatedGraph(SimpleGraph{T}(adj_matrix), starts, arrays)
+) where {T<:Integer} where {F<:Real}
+    !(adj_matrix.n == adj_matrix.m == length(starts)) && error("adj_matrix and starts are not consistent")
+    graph = SimpleWeightedGraph{T, F}(adj_matrix)
+    ActivatedGraph(graph, starts, arrays)
 end
 
 
 nv(g::ActivatedGraph) = nv(g.graph)
 
-neighbors(g::ActivatedGraph, v::Integer) = Graphs.neighbors(g.graph, v)
+neighbors(g::ActivatedGraph, v::Integer) = neighbors(g.graph, v)
 
 
-function get_vertex_array(g::ActivatedGraph, v::Int, key::Symbol)
+function get_vertex_array(g::ActivatedGraph{T}, v::Int, key::Symbol) where T
+    v = T.(vlist)
     @view g.arrays[key][g.starts[v]:g.stops[v]]
 end
 
@@ -65,7 +68,7 @@ function add_arrays!(g::ActivatedGraph; arrays...)
 end
 
 
-function find_vertex_id(g::ActivatedGraph{T}, index_array::Integer) where {T}
+function find_vertex_id(g::ActivatedGraph{T}, index_array::Integer) where T
     i = T(index_array)
     vertex_id = searchsortedlast(g.starts, i)
     T(vertex_id)
