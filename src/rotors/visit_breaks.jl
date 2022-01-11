@@ -17,6 +17,7 @@ function visit_breaks!(
         error("trajectory must start on the break (conduction < 1)")
 
     weights = g.graph.weights
+    eltype_weights = eltype(weights)
     keys_in_arrays = (:parents, :lifetime, :dists, :roots) .∈ (keys(g.arrays),)
 
     if !any(keys_in_arrays)
@@ -24,7 +25,7 @@ function visit_breaks!(
         g[:parents] = zeros(T, g.len_array)
         g[:roots] = deepcopy(g[:parents])
         g[:lifetime] = zeros(g.len_array)
-        g[:dists] = fill(typemax(eltype(weights)), g.len_array)
+        g[:dists] = fill(typemax(eltype_weights), g.len_array)
     elseif any(keys_in_arrays) && !all(keys_in_arrays)
         error("invalid arrays: $(keys(g.arrays))")
     elseif g[:parents][index_times_start] == -1
@@ -35,10 +36,11 @@ function visit_breaks!(
         return 0
     end
 
-    q = Queue{Tuple{T,T}}()  # (i_vertex, i_time)
+    pq = PriorityQueue{Tuple{T,T}, eltype_weights}(Base.Order.Reverse)
+    # (i_vertex, i_time) => (lifetime)
 
     v = find_vertex_id(g, index_times_start)
-    enqueue!(q, (v, index_times_start))
+    pq[v, index_times_start] = 0.
 
     # t_start = g[:times][index_times_start]  not used, 
     g[:parents][index_times_start] = -1  # root
@@ -51,9 +53,9 @@ function visit_breaks!(
         :dist_lifetime_max => 0
     )
 
-    while !isempty(q)
+    while !isempty(pq)
 
-        v, i_t_v = dequeue!(q)
+        v, i_t_v = dequeue!(pq)
         t_v = g[:times][i_t_v]
         d_v = g[:dists][i_t_v]
         @debug "dequeue: $v, $i_t_v ($t_v, $d_v)"
@@ -65,8 +67,7 @@ function visit_breaks!(
 
             w_v_u = weights[v, u]
 
-            for i_t_u = Iterators.reverse(g.starts[u]:g.stops[u])
-                #  `reverse` prioritizes positive dt
+            for i_t_u = g.starts[u]:g.stops[u]
 
                 # @debug "$u, $i_t_u, ($(g[:times][i_t_u]), $(g[:dists][i_t_u]))"
 
@@ -91,7 +92,6 @@ function visit_breaks!(
                         g[:parents][i_t_u] = i_t_v
                         g[:roots][i_t_u] = index_times_start
                         g[:dists][i_t_u] = dist_v_u
-                        enqueue!(q, (u, i_t_u))
 
                         lifetime = g[:lifetime][i_t_v] + dt
                         g[:lifetime][i_t_u] = lifetime
@@ -102,6 +102,9 @@ function visit_breaks!(
                             summary_info[:dist_lifetime_max] = dist_v_u
                         end
 
+                        pq[(u, i_t_u)] = lifetime
+
+                    # this is almost useless
                     # elseif dist_v_u < g[:dists][i_t_u]
 
                     #     @info "shorter one"
