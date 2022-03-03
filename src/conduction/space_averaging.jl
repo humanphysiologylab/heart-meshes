@@ -2,72 +2,100 @@ using Graphs, SimpleWeightedGraphs
 using ProgressMeter
 using Random
 using Statistics
+using OrderedCollections
 
 include("../misc/graph.jl")
 include("../io/read_binary.jl")
 include("../io/load_adj_matrix.jl")
 
+disk_name = "Samsung_T5"
+
 ##
 heart_id = 13
-##
 
 folder = joinpath("/media/andrey/ssd2/WORK/HPL/Data/rheeda", "M$heart_id", "adj_matrix")
 adj_matrix = load_adj_matrix(folder, false)
 g = SimpleWeightedGraph(adj_matrix)
 
 ##
-
-using OrderedCollections
-
 arrays = Dict{String,Vector}()
+
+##
 
 multi_index = OrderedDict(
     "group" => 1:4,
     "period" => ("before", "after"),
     "method" => ("percent", "binary"),
+    "counts" => ("activation", "transmission")
+)
+
+for index_values in Iterators.product(values(multi_index)...)
+
+    i_group, period, method, counts = index_values
+
+    folder_conduction = joinpath(
+        "/media/andrey", 
+        disk_name,
+        "Rheeda/activation/conduction-mean/"
+    )
+
+    counts_name = (counts == "transmission") ? "sum" : "count"
+    ext = (counts == "transmission") ? ".float64" : ".int64"
+    type = (counts == "transmission") ? Float64 : Int
+
+    data = read_binary(
+        joinpath(
+            folder_conduction,
+            "M$heart_id-G$i_group-conduction-$method-$counts_name-$period-2500-ms$ext",
+        ),
+        type,
+    )
+
+    # wavebreak_mean = @. 1.0 - conduction_sum / conduction_count
+    # @. wavebreak_mean[isnan(wavebreak_mean)] = 1.0
+
+    key = "M$heart_id-G$i_group-$period-$method-$counts"
+    arrays[key] = data
+
+end
+
+##
+
+multi_index = OrderedDict(
+    "group" => 1:4,
+    "period" => ("before", "after"),
+    "method" => ("percent", "binary"),
+    # "counts" => ("activation", "transmission")
 )
 
 for index_values in Iterators.product(values(multi_index)...)
 
     i_group, period, method = index_values
 
-    folder_conduction = "/media/andrey/easystore/Rheeda/activation/conduction-mean/"
-    conduction_sum = read_binary(
-        joinpath(
-            folder_conduction,
-            "M$heart_id-G$i_group-conduction-$method-$sum-$period-2500-ms.float64",
-        ),
-        Float64,
-    )
-    conduction_count = read_binary(
-        joinpath(
-            folder_conduction,
-            "M$heart_id-G$i_group-conduction-$method-$count-$period-2500-ms.int64",
-        ),
-        Int64,
-    )
-    wavebreak_mean = @. 1.0 - conduction_sum / conduction_count
-    @. wavebreak_mean[isnan(wavebreak_mean)] = 1.0
+    key_numerator = "M$heart_id-G$i_group-$period-$method-transmission"
+    key_denominator = "M$heart_id-G$i_group-$period-$method-activation"
 
-    key = "wavebreaks-M$heart_id-G$i_group-$period-$method"
-    arrays[key] = wavebreak_mean
+    key_result = "M$heart_id-G$i_group-$period-$method-ratio"
+
+    arrays[key_result] = arrays[key_numerator] ./ arrays[key_denominator]
 
 end
 
+
 ##
 filename_mask_fibrosis =
-    joinpath("/media/andrey/easystore/Rheeda", "M$heart_id", "mask_fibrosis.bool")
+    joinpath("/media/andrey", disk_name, "Rheeda", "M$heart_id", "mask_fibrosis.bool")
 arrays["fibrosis-density"] = read_binary(filename_mask_fibrosis, Bool)
 
 ##
 n_points = size(adj_matrix, 1)
-n_samples = 10_000
+n_samples = 100_000
 samples = randperm(MersenneTwister(1234), n_points)[1:n_samples]
 # radia = [1e4]
 r = 1e4
 ##
 
-folder_save = "/media/andrey/easystore/Rheeda/activation/wavebreaks-averaged"
+folder_save = joinpath("/media/andrey", disk_name, "Rheeda/activation/wavebreaks-averaged")
 filename_csv = joinpath(folder_save, "latest.csv")
 
 ##
@@ -75,13 +103,14 @@ filename_csv = joinpath(folder_save, "latest.csv")
 vertex_id_column = "vertex_id"
 header_names = [vertex_id_column, collect(keys(arrays))...]
 
-if !isfile(filename_csv)
+if true # !isfile(filename_csv)
     @info "Create csv with header!"
     header = join(header_names, ",")
     write(filename_csv, header * "\n")
 end
 
 file_csv = open(filename_csv, "a");
+# file_csv = open(filename_csv, "w");
 
 @showprogress for vertex_id ∈ samples
 
@@ -93,6 +122,12 @@ file_csv = open(filename_csv, "a");
     for (i, (key, value)) in enumerate(arrays)
         x = mean(value[neighbours])
         write(file_csv, "," * string(x))
+
+        # for p in 0: 0.25: 1
+        #     x = quantile(value[neighbours], p)
+        #     write(file_csv, "," * string(x))
+        # end
+
     end
 
     write(file_csv, "\n")
@@ -118,17 +153,25 @@ vertex_id_column = :vertex_id
 df[!, vertex_id_column] = convert.(Int, df[!, vertex_id_column])
 ##
 
-# using CSV
+using CSV
 
 # df = DataFrame(CSV.File("../../data/rotors/M13-FE-r1e4-srcs.csv"))
 
 ##
-ds = dijkstra_many_sourses(g, df[!, vertex_id_column])
+
+filename_load = "../../data/space_averaging/M15.csv"
+df = DataFrame(CSV.File(filename_load))
+vertex_id_column = :vertex_id
+
+##
+# ds = dijkstra_many_sourses(g, df[!, vertex_id_column])
+ds = dijkstra_many_sourses(ag.graph, df[!, vertex_id_column])
+
 nearest_src = ds.parents
 
-columns = ("fibrosis-entropy",)
+columns = ("fibrosis-density",)
 # columns = header[2:end]
-n_points = size(adj_matrix, 1)
+n_points = nv(ag.graph)
 
 ## 
 
@@ -139,7 +182,13 @@ for c in columns
 end
 
 ## 
-filename_interp_csv = joinpath(folder_save, "latest_interp.csv")
+
+filename_interp_save = "../../data/space_averaging/M15_fd_interp.csv"
+# filename_interp_csv = joinpath(folder_save, "latest_interp.csv")
+
+# CSV.write(filename_interp_save, df_interp)
+
+##
 
 writedlm(
     filename_interp_csv,

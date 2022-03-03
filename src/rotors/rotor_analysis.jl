@@ -128,9 +128,14 @@ CSV.write("../../data/rotors/M15-CL_crit.csv", df)
 
 
 folder_root = "/media/andrey/easystore/Rheeda/activation/"
+folder_root = "/media/andrey/Samsung_T5/Rheeda/activation/"
 
 group_ids = 1:4
 stim_ids = 0:39
+
+group_ids = (1,)
+stim_ids = (13,)
+heart_ids = (13,)
 
 df = DataFrame(heart = Int[], group = Int[], stim = Int[], birth_indices = Vector{Int}[])
 
@@ -165,7 +170,8 @@ for i_heart in heart_ids, i_group in group_ids, i_stim in stim_ids
     for rotor in rotors
         indices_rotor = convert.(Int, rotor["indices_points"])
 
-        act_times_rotor = create_act_times_subset(act_times, indices_rotor)
+        # act_times_rotor = create_act_times_subset(act_times, indices_rotor)
+        act_times_rotor = act_times  # REMOVE ME
 
         birthtime = rotor["t_start"]
         inittime = 10.0  # ms
@@ -174,11 +180,11 @@ for i_heart in heart_ids, i_group in group_ids, i_stim in stim_ids
             findall((birthtime .<= act_times_rotor.times .<= birthtime + inittime))
 
         birth_indices = Int[]
-        for i in birth_indices_times
-            birth_index = searchsortedlast(act_times_rotor.starts, i)
-            birth_index_native = indices_rotor[birth_index]
-            push!(birth_indices, birth_index_native)
-        end
+        # for i in birth_indices_times
+        #     birth_index = searchsortedlast(act_times_rotor.starts, i)
+        #     birth_index_native = indices_rotor[birth_index]
+        #     push!(birth_indices, birth_index_native)
+        # end
 
         row = Dict(
             "heart" => i_heart,
@@ -198,3 +204,29 @@ end
 ##
 
 CSV.write("../../data/rotors/birth_indices.csv", df)
+
+
+##
+
+heart_ids = (13, 15)
+group_ids = 1: 4
+stim_ids = 0: 39
+
+adj_matrices = Dict(
+    i_heart =>
+        load_adj_matrix("/media/andrey/ssd2/WORK/HPL/Data/rheeda/M$i_heart/adj_matrix", false)
+    for i_heart in heart_ids
+)
+
+folder_root = "/media/andrey/easystore/Rheeda/activation/"
+
+##
+
+for i_heart in heart_ids, i_group in group_ids, i_stim in stim_ids
+
+i_heart, i_group, i_stim = 13, 1, 28
+
+triplet = "M$i_heart-G$i_group-S$(string(i_stim, pad = 2))"
+filename = joinpath("../../data/rotors/trajectories/", "$triplet.json")
+
+rotors = JSON.parsefile(filename)

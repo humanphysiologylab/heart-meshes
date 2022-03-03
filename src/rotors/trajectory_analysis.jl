@@ -24,6 +24,17 @@ rotors = JSON3.read(read(filename, String))
 
 ##
 
+include("../cv/calculate_time_gradient.jl")
+
+rotor = rotors[1]
+times_ids = rotor["times_ids"]
+
+
+
+
+
+##
+
 function create_trajectory(vertices, times, points; rolling_window = 10) 
 
     traj = points[:, vertices]
@@ -52,7 +63,7 @@ t, X = create_trajectory(rotor[:vertex_ids], rotor[:times], points, rolling_wind
 
 ##
 
-function calculate_traj_length(traj)
+function calculate_traj_length(X)
     sum(sum(diff(X, dims=2) .^ 2, dims=1) .^ 0.5)
 end
 
@@ -66,8 +77,8 @@ end
 
 ##
 
-perimeter = calculate_traj_length(X)
-CL = find_dominant_period(X)
+perimeter = calculate_traj_length(X_smooth)
+CL = find_dominant_period(X_smooth)
 
 lifetime = diff(rotor[:times][[1, end]])[1]
 

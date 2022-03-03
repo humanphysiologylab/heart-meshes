@@ -153,9 +153,9 @@ version = "0.7.0"
 
 [[deps.ColorSchemes]]
 deps = ["ColorTypes", "Colors", "FixedPointNumbers", "Random"]
-git-tree-sha1 = "a851fec56cb73cfdf43762999ec72eff5b86882a"
+git-tree-sha1 = "6b6f04f93710c71550ec7e16b650c1b9a612d0b6"
 uuid = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
-version = "3.15.0"
+version = "3.16.0"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
@@ -200,6 +200,12 @@ version = "3.41.0"
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
+
+[[deps.Compose]]
+deps = ["Base64", "Colors", "DataStructures", "Dates", "IterTools", "JSON", "LinearAlgebra", "Measures", "Printf", "Random", "Requires", "Statistics", "UUIDs"]
+git-tree-sha1 = "9a2695195199f4f20b94898c8a8ac72609e165a4"
+uuid = "a81c6b42-2e10-5240-aca2-a61377ecd94b"
+version = "0.9.3"
 
 [[deps.CompositeTypes]]
 git-tree-sha1 = "d5b014b216dc891e81fea299638e4c10c657b582"
@@ -423,6 +429,12 @@ git-tree-sha1 = "358df0acb0526b2201c35d96f5cc6fca85c27fbe"
 uuid = "08572546-2f56-4bcf-ba4e-bab62c3a3f89"
 version = "0.2.8"
 
+[[deps.Fontconfig]]
+deps = ["Fontconfig_jll", "Libdl", "Printf"]
+git-tree-sha1 = "beef89322ccf3b80062f522ed6f82089a254491e"
+uuid = "186bb1d3-e1f7-5a2c-a377-96d770f13627"
+version = "0.4.0"
+
 [[deps.Fontconfig_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Expat_jll", "FreeType2_jll", "JLLWrappers", "Libdl", "Libuuid_jll", "Pkg", "Zlib_jll"]
 git-tree-sha1 = "21efd19106a55620a188615da6d3d06cd7f6ee03"
@@ -504,6 +516,12 @@ deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libic
 git-tree-sha1 = "a32d672ac2c967f3deb8a81d828afc739c838a06"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
 version = "2.68.3+2"
+
+[[deps.GraphPlot]]
+deps = ["ArnoldiMethod", "ColorTypes", "Colors", "Compose", "DelimitedFiles", "Graphs", "LinearAlgebra", "Random", "SparseArrays"]
+git-tree-sha1 = "5e51d9d9134ebcfc556b82428521fe92f709e512"
+uuid = "a2cc645c-3eea-5389-862e-a155d0052231"
+version = "0.5.0"
 
 [[deps.Graphics]]
 deps = ["Colors", "LinearAlgebra", "NaNMath"]
@@ -1461,6 +1479,12 @@ git-tree-sha1 = "53915e50200959667e78a92a418594b428dffddf"
 uuid = "1cfade01-22cf-5700-b092-accc4b62d6e1"
 version = "0.4.1"
 
+[[deps.UnicodePlots]]
+deps = ["Contour", "Crayons", "Dates", "SparseArrays", "StatsBase"]
+git-tree-sha1 = "0efb50275f42f2795b771a4ad2c339db9760fd98"
+uuid = "b8865327-cd53-5732-bb35-84acbb429228"
+version = "2.6.0"
+
 [[deps.Unzip]]
 git-tree-sha1 = "34db80951901073501137bdbc3d5a8e7bbd06670"
 uuid = "41fe7b60-77ed-43a1-b4f0-825fd5a5650d"
@@ -1745,9 +1769,9 @@ version = "1.6.38+0"
 
 [[deps.libvorbis_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Ogg_jll", "Pkg"]
-git-tree-sha1 = "c45f4e40e7aafe9d086379e5578947ec8b95a8fb"
+git-tree-sha1 = "b910cb81ef3fe6e78bf6acee440bda86fd6ae00c"
 uuid = "f27f6e37-5d2b-51aa-960f-b287f2bc3b7a"
-version = "1.3.7+0"
+version = "1.3.7+1"
 
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
