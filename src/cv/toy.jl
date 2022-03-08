@@ -42,7 +42,7 @@ end
 times_mat .+= rand(Float64, size(times_mat))
 
 times = times_mat[:]
-# colors = find_colors(times, cm);
+colors = find_colors(times, cm);
 
 g = SimpleWeightedDiGraph(grid([nx, ny, nz]))
 

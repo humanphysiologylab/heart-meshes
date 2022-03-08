@@ -13,11 +13,17 @@ g = SimpleWeightedDiGraph(grid([nx, ny]))
 
 ##
 
-filename_starts = "/home/andrey/WORK/HPL/projects/rheeda/publication/data/2d/G4_starts.int"
+suffix = "_100uM_jitter"
+
+##
+
+filename_starts = "../2d/G4_starts$suffix.int"
 starts = read_binary(filename_starts, Int)
 
-filename_times = "/home/andrey/WORK/HPL/projects/rheeda/publication/data/2d/G4_times.float"
+filename_times = "../2d/G4_times$suffix.float"
 times = read_binary(filename_times, Float64)  # .|> float
+
+##
 
 h = 100. * 1 # um
 points = Iterators.product(1:nx, 1:ny) .|> collect
@@ -25,6 +31,39 @@ points = hcat(points[:]...)
 points = collect(transpose(float.(points)))
 
 points .*= h
+
+##
+
+filename_points = "../2d/G4_points$suffix.float"
+points = read_binary(filename_points, Float64, (2, :))
+points = permutedims(points, (2, 1))  # .|> float
+
+##
+using DelimitedFiles
+edges = readdlm("../2d/G4_edges$suffix.txt", ' ', Int, '\n')
+edges .+= 1
+
+##
+
+using Distances
+W_up = colwise(
+    Euclidean(),
+    transpose(points[edges[:, 1], :]),
+    transpose(points[edges[:, 2], :])
+)
+
+
+##
+
+dh = 100.  # um
+g = SimpleWeightedGraph(
+    edges[:, 1],
+    edges[:, 2],
+    W_up
+    # fill(dh, size(edges, 1))
+)
+
+##
 
 ag = ActivatedGraph(
     sparse(Graphs.weights(g)),
@@ -48,7 +87,7 @@ times = ag[:times][trajectory]
 
 using DataFrames, CSV
 
-filename_save = "/home/andrey/WORK/HPL/projects/rheeda/publication/data/2d/G4_grad.csv"
+filename_save = "../2d/G4_trajectory_grad$suffix.csv"
 
 df = DataFrame(:t => times, :x => X[:, 1], :y => X[:, 2])
 CSV.write(filename_save, df)

@@ -19,11 +19,11 @@ function find_successor(
 
     ζ = is_forward ? 1 : -1
 
-    # us = neighbors(g, current[:v])
+    us = neighbors(g, current[:v])
 
     neighborhood_max_dist = 2.
-    us = neighborhood(g.graph, current[:v], neighborhood_max_dist)
-    us = filter(x -> x ≠ current[:v], us)
+    # us = neighborhood(g.graph, current[:v], neighborhood_max_dist)
+    # us = filter(x -> x ≠ current[:v], us)
 
     next = Dict(
         :v => 0,
