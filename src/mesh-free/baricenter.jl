@@ -4,13 +4,18 @@ function calculate_baricentric_coordinates(point, tetrahedron)
     t4 = t[:, 4]
     point .- t4
     T = t[:, 1: 3] .- t4    
-    λ⃗ = inv(T) * (point .- t4)
+    λ⃗ = zeros(4)
+    λ⃗[1: 3] .= inv(T) * (point .- t4)
+    λ⃗[4] = 1 - sum(λ⃗[1: 3])
+    return λ⃗
 end
 
 
-function interpolate_baricentric(point, tetrahedron, y)
+function interpolate_baricentric(point, tetrahedron, y; safety_factor=1e-5)
     size(tetrahedron, 1) ≠ length(y)  && error("tetrahedron and y has different lengths")
     λ⃗ = calculate_baricentric_coordinates(point, tetrahedron)
-    λ4 = 1 - sum(λ⃗)
-    y_interp = λ⃗[1:3] ⋅ y[1:3] + λ4 * y[4]
+    if any(λ⃗ .< -safety_factor)
+        @warn "interpolation outside the tetrahedron: $λ⃗"
+    end
+    y_interp = λ⃗ ⋅ y
 end

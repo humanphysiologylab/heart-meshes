@@ -88,7 +88,7 @@ end
 
 function get_vertex_vector(mesh::ActivatedMesh{T}, v::Integer, key::Symbol) where T
     v = T.(v)
-    @view g.vertex_vectors[key][mesh.starts[v]: mesh.stops[v]]
+    @view mesh.vertex_vectors[key][mesh.starts[v]: mesh.stops[v]]
 end
 
 

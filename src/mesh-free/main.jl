@@ -1,10 +1,14 @@
 include("../io/read_binary.jl")
 include("../io/load_geom_data.jl")
 include("../misc/load_things.jl")
-include("./edge_hopping.jl")
 using SparseArrays
 using Random
 # using PlotlyJS
+
+include("../ActivatedMeshes/ActivatedMeshes.jl")
+using .ActivatedMeshes
+
+include("./edge_hopping.jl")
 
 ##
 
