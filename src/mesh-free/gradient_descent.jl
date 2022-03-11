@@ -3,68 +3,14 @@ dfs = []
 
 ##
 index_tetrahedron = 142_000  # good
-index_tetrahedron = 242_000
-
+# index_tetrahedron = 1_000_000
 
 t = mesh.elements[index_tetrahedron, :]
 t_coords = get_tetra_points(mesh, index_tetrahedron)
 t_center = mean(t_coords, dims=1)[1, :]
-t_times = find_nearest_times(mesh, t, 6000.)
+t_times = find_nearest_times(mesh, t, 7500.)
 t_start = mean(t_times)
 cv = calculate_cv(t_coords, t_times)
-
-##
-
-function gradient_descent_step(time, p, index_tetrahedron, mesh; Δt=-1.)
-
-    t = mesh.elements[index_tetrahedron, :]
-
-    t_coords = get_tetra_points(mesh, index_tetrahedron)
-    t_times = find_nearest_times(mesh, t, time)
-
-    cv = calculate_cv(t_coords, t_times)
-
-    time_next = time + Δt
-    p_next = p + Δt * cv
-    i_next = edge_hopping(index_tetrahedron, p_next, mesh)[1]
-
-    if isnothing(i_next)
-        i_next = rand(neighbors(mesh.graph_elements, index_tetrahedron))
-        t_coords = get_tetra_points(mesh, i_next)
-        p_next = mean(t_coords, dims=1)[1, :]
-    end
-
-    # n_facets = 4
-    # success = false
-
-    # for _ in 1: n_facets
-    #     if !isnothing(i_next)
-    #         success = true 
-    #         continue
-    #     end
-    #     facet_indices = select_outer_facet(p_next, t_coords)
-    #     facet = t_coords[facet_indices, :]
-    #     n⃗ = calculate_facet_norm(facet)
-    #     n⃗ /= norm(n⃗)
-    #     cv_n⃗ = (cv ⋅ n⃗) * n⃗
-    #     cv -= cv_n⃗
-
-    #     time_next = time + Δt
-    #     p_next = p + Δt * cv
-
-    #     i_next = edge_hopping(index_tetrahedron, p_next, mesh)[1]
-
-    # end
-
-    # !success && return
-
-    t_times = find_nearest_times(mesh, mesh.elements[i_next, :], time_next)
-    t_coords = get_tetra_points(mesh, i_next)
-    time_next = interpolate_baricentric(p_next, t_coords, t_times)
-
-    return time_next, p_next, i_next
-
-end
 
 ##
 
@@ -98,8 +44,12 @@ push!(rows, row)
 empty!(cb)
 
 # for _ in 1: 1_000
+cv_EMA = [0., 0., 0.]
+α_EMA = 0.01
+
 while true
-    t_next, p_next, i_next = gradient_descent_step(t_next, p_next, i_next, mesh, Δt=-1e-1)
+    # t_next, p_next, i_next = gradient_descent_step(t_next, p_next, i_next, mesh, step=-100.)
+    t_next, p_next, i_next, cv_EMA = gradient_descent_step_EMA(t_next, p_next, i_next, mesh, cv_EMA, α_EMA, step=-100.)
     push!(cb, t_next)
     terminate(cb, 0.001) && break
     @show t_next
@@ -113,7 +63,7 @@ end
 
 df = DataFrame(rows)
 # df = df[end-50:end, :]
-df = df[1 : 1000, :]
+# df = df[1 : 1000, :]
 
 ##
 
@@ -154,6 +104,20 @@ trace = scatter3d(;
 )
 push!(traces, trace)
 
+stride = 100
+trace_bg = scatter3d(;
+    x=points[1: stride: end, 1],
+    y=points[1: stride: end, 2],
+    z=points[1: stride: end, 3],
+    mode="markers",
+    marker_size=1,
+    marker_color="lightgrey"
+    # colorscale="Greys",
+    # marker_color=times_stop[1: stride: end]
+)
+push!(traces, trace_bg)
+
+##
 
 for i in unique(df.i)
 
@@ -214,18 +178,7 @@ for (i_row, row) in enumerate(eachrow(df))
 
 end
 
-stride = 100
-trace_bg = scatter3d(;
-    x=points[1: stride: end, 1],
-    y=points[1: stride: end, 2],
-    z=points[1: stride: end, 3],
-    mode="markers",
-    marker_size=1,
-    marker_color="lightgrey"
-    # colorscale="Greys",
-    # marker_color=times_stop[1: stride: end]
-)
-push!(traces, trace_bg)
+##
 
 plot(
     [t for t in traces],
