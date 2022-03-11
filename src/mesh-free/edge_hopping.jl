@@ -1,8 +1,8 @@
-include("./find_element.jl")
+include("outer_facet.jl")
 using StatsBase
 
 
-function edge_hopping(i_tetra_start, point; points, tetra, A_tetra, save_trace=false)
+function edge_hopping(i_tetra_start, point, points, tetra, A_tetra; save_trace=false)
 
     trace = save_trace ? [i_tetra_start] : nothing
 
@@ -52,7 +52,7 @@ function edge_hopping(i_tetra_start, point; points, tetra, A_tetra, save_trace=f
 end
 
 
-function edge_hopping(i_tetra_start, point; mesh::ActivatedMesh, save_trace=false)
+function edge_hopping(i_tetra_start, point, mesh::ActivatedMesh; save_trace=false)
 
     points = mesh[:points]
     tetra = mesh.elements
@@ -60,10 +60,10 @@ function edge_hopping(i_tetra_start, point; mesh::ActivatedMesh, save_trace=fals
 
     edge_hopping(
         i_tetra_start,
-        point;
+        point,
         points,
         tetra,
-        A_tetra,
+        A_tetra;
         save_trace
     )
 

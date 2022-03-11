@@ -1,38 +1,3 @@
-using DataFrames, CSV
-using PlotlyJS
-using Graphs, SimpleWeightedGraphs
-using ProgressMeter
-using UnPack
-
-include("calculate_cv.jl")
-include("intersections.jl")
-include("baricenter.jl")
-include("find_next_tetrahedron.jl")
-include("find_nearest_times.jl")
-include("plot_tetrahedron_edges.jl")
-
-##
-
-path_harddrive = "/Volumes/Samsung_T5"
-path_harddrive = "/media/andrey/Samsung_T5"
-
-filename_times = joinpath(
-    path_harddrive,
-    "Rheeda/activation/data-light/M13/G1/S13/times.float32"
-)
-times = read_binary(filename_times, Float32)
-
-filename_starts = joinpath(
-    path_harddrive,
-    "Rheeda/activation/data-light/M13/G1/S13/indices_start.int32"
-)
-starts = read_binary(filename_starts, Int32)
-
-A_vertices = load_adj_matrix(joinpath(folder, "adj_matrix"), false)
-
-mesh = ActivatedMesh(A_vertices, A_tetra, tetra, starts, Dict(:times => times), Dict(:points => points))
-
-##
 rows = []
 
 index_tetrahedron = 7_000

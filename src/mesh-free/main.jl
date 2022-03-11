@@ -1,50 +1,18 @@
-include("../io/read_binary.jl")
-include("../io/load_geom_data.jl")
-include("../misc/load_things.jl")
-using SparseArrays
-using Random
-# using PlotlyJS
-
-include("../ActivatedMeshes/ActivatedMeshes.jl")
-using .ActivatedMeshes
-
-include("./edge_hopping.jl")
-
-##
-
-folder = "/Volumes/Samsung_T5/Rheeda/M13"
-folder = "/media/andrey/Samsung_T5/Rheeda/M13"
-
-filename_tetra = joinpath(folder, "M13_IRC_tetra.int32")
-tetra = read_binary(filename_tetra, Int32, (4, :))
-tetra = permutedims(tetra, (2, 1))
-tetra .+= 1
-
-filename_points = joinpath(folder, "M13_IRC_3Dpoints.float32")
-points = read_binary(filename_points, Float32, (3, :))
-points = permutedims(points, (2, 1))
-
-filename_I_tetra = joinpath(folder, "I_tetra.int32")
-I_tetra = read_binary(filename_I_tetra, Int32)
-filename_J_tetra = joinpath(folder, "J_tetra.int32")
-J_tetra = read_binary(filename_J_tetra, Int32)
-
-A_tetra = sparse(I_tetra, J_tetra, trues(size(I_tetra)))
-
-##
-
 n_points = size(points, 1)
 rows = rowvals(A_tetra)
+
+##
 
 i = 1
 t = tetra[i, :]
 
-j = rows[nzrange(A_tetra, j)][rand(1: 3)]
-for _ in 1: 1000
+j = rows[nzrange(A_tetra, i)][rand(1: 3)]
+
+# j = rand(1: n_points)
+for _ in 1: 10000
     j = rows[nzrange(A_tetra, j)][rand(1: 3)]
 end
 
-j = rand(1: n_points)
 
 t_neighbor = tetra[j, :]
 p = mean(points[t_neighbor, :], dims=1)[1, :]
@@ -53,7 +21,7 @@ p .+= rand(eltype(p), size(p))
 
 # i_last, trace = edge_hopping(i, p; points, tetra, A_tetra, save_trace=true)
 
-i_last, trace = edge_hopping(i, p; points=mesh[:points], tetra=mesh.elements, A_tetra=mesh.graph_elements.weights, save_trace=true)
+i_last, trace = edge_hopping(i, p, mesh, save_trace=true)
 @show length(trace)
 
 ##
