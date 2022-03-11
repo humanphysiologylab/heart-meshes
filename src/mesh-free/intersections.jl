@@ -46,18 +46,18 @@ function intersect_tetrahedron(tetrahedron, o_line, l_line; direction=:forward, 
         indices = 1 .+ collect((i: i + n_dims - 1)) .% n_vertices
 
         if !isnothing(plane_indices_skip) && all(indices .∈ (plane_indices_skip,))
-            @info "plane skipped" 
+            # @info "plane skipped" 
             continue
         end
 
         plane = tetrahedron[indices, :]
-        @show d, x = intersect_plane(plane, o_line, l_line)
+        d, x = intersect_plane(plane, o_line, l_line)
 
         (d * ξ < 0) && continue  # another direction
 
         !isnothing(result_indices) && (d * ξ > d_best * ξ) && continue 
 
-        @info "update"
+        # @info "update"
         result_indices = indices
         result_coords = x
         d_best = d
@@ -65,5 +65,32 @@ function intersect_tetrahedron(tetrahedron, o_line, l_line; direction=:forward, 
     end
 
     return (indices = result_indices, p = result_coords, d = d_best)
+
+end
+
+
+function intersect_tetrahedron_full(tetrahedron, o_line, l_line)
+
+    n_vertices, n_dims = size(tetrahedron)
+    (n_vertices, n_dims) ≠ (4, 3) && error("wrong tetrahedron")
+
+    points = zeros(size(t_coords))
+    planes_indices = zeros(Int, size(points))
+    ds = zeros(size(points, 1))
+
+    for i in 1: n_vertices
+
+        indices = 1 .+ collect((i: i + n_dims - 1)) .% n_vertices
+
+        plane = tetrahedron[indices, :]
+        d, x = intersect_plane(plane, o_line, l_line)
+
+        planes_indices[i, :] .= indices
+        points[i, :] = x
+        ds[i] = d
+
+    end
+
+    return (planes_indices = planes_indices, points = points, ds = ds)
 
 end

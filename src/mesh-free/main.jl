@@ -13,6 +13,7 @@ include("./edge_hopping.jl")
 ##
 
 folder = "/Volumes/Samsung_T5/Rheeda/M13"
+folder = "/media/andrey/Samsung_T5/Rheeda/M13"
 
 filename_tetra = joinpath(folder, "M13_IRC_tetra.int32")
 tetra = read_binary(filename_tetra, Int32, (4, :))
