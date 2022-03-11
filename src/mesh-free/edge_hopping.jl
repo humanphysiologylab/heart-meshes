@@ -35,7 +35,7 @@ function edge_hopping(i_tetra_start, point, points, tetra, A_tetra; save_trace=f
         end
 
         if isnothing(i_tetra_proposed)
-            @warn "nothing found"
+            # @warn "nothing found"
             break
         end
         

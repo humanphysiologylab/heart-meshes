@@ -7,7 +7,7 @@ include("../io/load_adj_matrix.jl")
 
 ##
 
-folder = "/Volumes/Samsung_T5/Rheeda/M13"
+folder = "/Volumes/Samsung_T5/Rheeda/M15"
 
 points, tetra, _ = load_geometry_data(folder)
 points = permutedims(points, (2, 1))
@@ -99,9 +99,9 @@ i_first_zero = findfirst(iszero, I_tetra)
 
 for (letter, X) in zip("IJ", (I_tetra, J_tetra))
 
-    break
+    @show filename_save = joinpath(folder, "$(letter)_tetra.int32")
 
-    filename_save = joinpath(folder, "$(letter)_tetra.int32")
+    continue
 
     open(filename_save, "w") do f
         write(f, X[1 : i_first_zero - 1])
