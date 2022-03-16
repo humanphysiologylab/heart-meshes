@@ -3,6 +3,8 @@ using SparseArrays
 using ProgressMeter
 using Distances
 using Graphs, SimpleWeightedGraphs
+using UnicodePlots
+using StatsBase
 
 include("../io/load_geom_data.jl")
 include("../io/load_adj_matrix.jl")
@@ -11,20 +13,21 @@ include("../io/read_binary.jl")
 ##
 
 folder = "/home/andrey/WORK/HPL/projects/rheeda/publication/data/2d"
+folder = "/Volumes/Samsung_T5/HPL/rheeda/data/2d-meshes/"
 
-suffix = "2000um"
+suffix = "100um"
+group = 4
 
-
-filename_points = joinpath(folder, "G4_points_$(suffix)_jitter.float")
+filename_points = joinpath(folder, "G$(group)_points_$(suffix).float")
 points = read_binary(filename_points, Float64, (2, :))
 points = permutedims(points, (2, 1))
 
-filename_elements = joinpath(folder, "G4_elements_$(suffix).int")
+filename_elements = joinpath(folder, "G$(group)_elements_$(suffix).int")
 elements = read_binary(filename_elements, Int, (3, :))
 elements = permutedims(elements, (2, 1))
 elements .+= 1
 
-filename_edges = joinpath(folder, "G4_edges_$(suffix).int")
+filename_edges = joinpath(folder, "G$(group)_edges_$(suffix).int")
 edges = read_binary(filename_edges, Int, (2, :))
 edges = permutedims(edges, (2, 1))
 edges .+= 1
@@ -136,7 +139,7 @@ i_first_zero = findfirst(iszero, I_element)
 
 for (letter, X) in zip("IJ", (I_element, J_element))
 
-    @show filename_save = joinpath(folder, "G4_$(letter)_element_$(suffix).int32")
+    @show filename_save = joinpath(folder, "G$(group)_$(letter)_element_$(suffix).int")
 
     # continue
 

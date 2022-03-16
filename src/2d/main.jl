@@ -12,22 +12,23 @@ using .ActivatedMeshes
 
 ##
 
-folder = "/home/andrey/WORK/HPL/projects/rheeda/publication/data/2d"
+folder = "/Volumes/Samsung_T5/HPL/rheeda/data/2d-meshes/"
 
-suffix = "2000um"
+suffix = "100um"
+group = 4
 
-filename_points = joinpath(folder, "G4_points_$(suffix)_jitter.float")
+filename_points = joinpath(folder, "G$(group)_points_$(suffix).float")
 points = read_binary(filename_points, Float64, (2, :))
 points = permutedims(points, (2, 1))
 
-filename_elements = joinpath(folder, "G4_elements_$(suffix).int")
+filename_elements = joinpath(folder, "G$(group)_elements_$(suffix).int")
 elements = read_binary(filename_elements, Int, (3, :))
 elements = permutedims(elements, (2, 1))
 elements .+= 1
 
-filename_I_element = joinpath(folder, "G4_I_element_$(suffix).int32")
+filename_I_element = joinpath(folder, "G$(group)_I_element_$(suffix).int")
 I_element = read_binary(filename_I_element, Int)
-filename_J_element = joinpath(folder, "G4_J_element_$(suffix).int32")
+filename_J_element = joinpath(folder, "G$(group)_J_element_$(suffix).int")
 J_element = read_binary(filename_J_element, Int)
 
 ##
@@ -36,7 +37,7 @@ A_element = sparse(I_element, J_element, trues(size(I_element)))
 
 ##
 
-filename_edges = joinpath(folder, "G4_edges_$(suffix).int")
+filename_edges = joinpath(folder, "G$(group)_edges_$(suffix).int")
 IJ = read_binary(filename_edges, Int, (2, :))
 IJ = permutedims(IJ, (2, 1))
 IJ .+= 1
@@ -61,10 +62,10 @@ A = g.weights
 
 ##
 
-filename_starts = joinpath(folder, "G4_starts_$(suffix)_jitter.int")
+filename_starts = joinpath(folder, "G$(group)_starts_$(suffix).int")
 starts = read_binary(filename_starts, Int)
 
-filename_times = joinpath(folder, "G4_times_$(suffix)_jitter.float")
+filename_times = joinpath(folder, "G$(group)_times_$(suffix).float")
 times = read_binary(filename_times, Float64)  # .|> float
 
 ##
@@ -80,13 +81,15 @@ mesh = ActivatedMesh(
 
 ##
 
-include("../mesh-free/edge_hopping.jl")
 include("../mesh-free/calculate_cv.jl")
 include("../mesh-free/intersections.jl")
 include("../mesh-free/baricenter.jl")
 include("../mesh-free/find_next_tetrahedron.jl")
 include("../mesh-free/find_nearest_times.jl")
 include("../mesh-free/plot_tetrahedron_edges.jl")
+
+include("edge_hopping.jl")
+include("gradient_descent_step.jl")
 
 ##
 
@@ -143,7 +146,8 @@ end
 
 ##
 
-dfs = [run_gradient_descent(;step=-2000) for _ in 1: 1];
+dfs = [run_gradient_descent(;step=-100) for _ in 1: 5];
+df = dfs[end]
 
 ##
 
@@ -158,7 +162,9 @@ for df in dfs
         x = df.x,
         y = df.y,
         # z = df.z,
-        mode = "lines",
+        mode = "lines+markers",
+        markers_size=2,
+        lines_width=1
     )
     push!(traces, trace)
 end
@@ -169,5 +175,5 @@ plot([[t for t in traces]...])
 
 ##
 
-filename_save_csv = joinpath(folder, "G4_trajectory_$(suffix)_jitter.csv")
+filename_save_csv = joinpath(folder, "G$(group)_trajectory_$(suffix).csv")
 CSV.write(filename_save_csv, dfs[end])
