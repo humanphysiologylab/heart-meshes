@@ -23,7 +23,12 @@ function create_trajectories_traces(dfs::Vector{DataFrame})
             z = df.z,
             mode = "lines",
             # marker_size = 2
-            # line_color="grey",
+
+            # line_color="white",
+            # line_size=10,
+            # lines_size=10,
+            # marker_size=10
+
             # showlegend=false
         )
         push!(traces, trace)

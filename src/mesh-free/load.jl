@@ -3,6 +3,7 @@ using DataFrames, CSV
 using PlotlyJS
 using Graphs, SimpleWeightedGraphs
 using ProgressMeter
+using DataStructures
 
 include("../ActivatedMeshes/ActivatedMeshes.jl")
 using .ActivatedMeshes
@@ -17,10 +18,15 @@ include("baricenter.jl")
 include("find_next_tetrahedron.jl")
 include("find_nearest_times.jl")
 include("plot_tetrahedron_edges.jl")
+include("gradient_descent_step.jl")
+include("plotly_helpers.jl")
+
+include("terminate.jl")
+include("run_gradient_descent.jl")
 
 ##
 
-heart = 15
+heart = 13
 folders_try = [
     "/Volumes/Samsung_T5/Rheeda",
     "/media/andrey/Samsung_T5/Rheeda"
@@ -46,7 +52,7 @@ A_tetra = sparse(I_tetra, J_tetra, trues(size(I_tetra)))
 ##
 
 group = 2
-stim = "17"
+stim = "13"
 
 filename_times = joinpath(
     folder,
