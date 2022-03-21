@@ -5,6 +5,9 @@ using Graphs, SimpleWeightedGraphs
 using ProgressMeter
 using DataStructures
 
+include("../ActivatedGraphs/ActivatedGraphs.jl")
+using .ActivatedGraphs
+
 include("../ActivatedMeshes/ActivatedMeshes.jl")
 using .ActivatedMeshes
 
@@ -20,6 +23,7 @@ include("find_nearest_times.jl")
 include("plot_tetrahedron_edges.jl")
 include("gradient_descent_step.jl")
 include("plotly_helpers.jl")
+include("../rotors/extend_area.jl")
 
 include("terminate.jl")
 include("run_gradient_descent.jl")
@@ -27,9 +31,10 @@ include("run_gradient_descent.jl")
 ##
 
 heart = 13
+disk_path = "samsung-T5/HPL/Rheeda"
 folders_try = [
-    "/Volumes/Samsung_T5/Rheeda",
-    "/media/andrey/Samsung_T5/Rheeda"
+    joinpath("/Volumes", disk_path),
+    joinpath("/media/andrey", disk_path)
 ]
 folder = folders_try[findfirst(isdir.(folders_try))]
 
@@ -56,13 +61,13 @@ stim = "13"
 
 filename_times = joinpath(
     folder,
-    "activation/data-light/M$heart/G$group/S$stim/times.float32"
+    "data-light/M$heart/G$group/S$stim/times.float32"
 )
 times = read_binary(filename_times, Float32)
 
 filename_starts = joinpath(
     folder,
-    "activation/data-light/M$heart/G$group/S$stim/indices_start.int32"
+    "data-light/M$heart/G$group/S$stim/indices_start.int32"
 )
 starts = read_binary(filename_starts, Int32)
 

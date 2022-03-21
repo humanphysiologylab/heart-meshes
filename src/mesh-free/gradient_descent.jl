@@ -1,4 +1,4 @@
-dfs = [run_gradient_descent(mesh) for _ in 1: 10];
+dfs = [run_gradient_descent(mesh) for _ in 1: 1];
 df = dfs[end]
 
 ##
@@ -12,25 +12,8 @@ plot([[t for t in traces]..., trace_bg])
 
 ##
 
-filename_csv_old = "/Volumes/Samsung_T5/HPL/rheeda/data/rotor-trajectory-feb22/M13-G1-S13-0.csv"
-df_old = DataFrame(CSV.File(filename_csv_old))
-
-trace_old = create_trajectories_traces([df_old])[1]
-
-##
-
-plot([[t for t in traces]..., trace_bg, trace_old])
-
-
-##
-
-include("../ActivatedGraphs/ActivatedGraphs.jl")
-using .ActivatedGraphs
-
-##
-
 t_min = 2600.
-t_max = 7000.
+t_max = 7300.
 
 indices = df[t_min .< df.t .< t_max, :i] |> unique
 vs = mesh.elements[indices, :] |> unique
@@ -46,8 +29,6 @@ point2element = [Int[] for i in 1:size(mesh[:points], 1)]
 end
 
 ##
-
-include("../rotors/extend_area.jl")
 
 ag = ActivatedGraph(
     mesh.graph_vertices.weights,
@@ -70,10 +51,10 @@ end
 elements_sub = vcat(elements_sub...) |> unique
 
 elements_sub_rand = elements_sub[randperm(length(elements_sub))][1:10]
+
 ##
 
 dfs = [run_gradient_descent(mesh, i; t_start=5000.) for i in elements_sub_rand];
-
 
 ##
 
@@ -86,6 +67,8 @@ function last_masked(t, t_min, t_max)
         return last(t_masked)
     end
 end
+
+##
 
 times_last = reduce(ag_sub, :times, t -> last_masked(t, t_min, t_max))
 
