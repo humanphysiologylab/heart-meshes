@@ -2,13 +2,19 @@ function gradient_descent_step(time, p, index_tetrahedron, mesh; step=-1, strate
 
     t = mesh.elements[index_tetrahedron, :]
 
+    # indices_elements = neighborhood(mesh.graph_elements, index_tetrahedron, 10)
+    # indices_vertices = mesh.elements[indices_elements, :] |> unique # flatten
+    # t_coords = mesh[:points][indices_vertices, :]
+    # t_times = find_nearest_times(mesh, indices_vertices, time)
+
     t_coords = get_tetra_points(mesh, index_tetrahedron)
     t_times = find_nearest_times(mesh, t, time)
 
     cv = calculate_cv(t_coords, t_times)
     cv_normalized = cv / norm(cv)
 
-    p_next = p + step * cv_normalized
+    Δp = step * cv_normalized
+    p_next = p + Δp
     i_next = edge_hopping(index_tetrahedron, p_next, mesh)[1]
 
     if isnothing(i_next)
@@ -28,10 +34,15 @@ function gradient_descent_step(time, p, index_tetrahedron, mesh; step=-1, strate
             for i in candidates
                 coords_candidate = get_tetra_points(mesh, i)
                 center_candidate = mean(coords_candidate, dims=1)[1, :]
-                dot_product = (center_candidate - center) ⋅ cv
+                dot_product = (center_candidate - center) ⋅ Δp
                 if dot_product > max_dot_product
                     i_next = i
-                    p_next = center_candidate
+                    # p_next = center_candidate
+
+                    λ = rand(4)
+                    λ ./= sum(λ)
+                    p_next = sum(coords_candidate .* λ, dims=1)[1, :]
+
                     max_dot_product = dot_product
                 end
             end

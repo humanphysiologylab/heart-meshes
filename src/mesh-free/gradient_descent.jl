@@ -1,4 +1,7 @@
-dfs = [run_gradient_descent(mesh) for _ in 1: 1];
+dfs = [run_gradient_descent(mesh, step=-100, strategy=:closest) for _ in 1: 10];
+
+dfs = [run_gradient_descent(mesh, 1, step=-100, strategy=:closest)];
+
 df = dfs[end]
 
 ##
@@ -8,7 +11,32 @@ trace_bg = create_heart_trace(mesh[:points])
 
 ##
 
-plot([[t for t in traces]..., trace_bg])
+plot([traces..., trace_bg])
+
+
+##
+
+trace_scatter = scatter3d(;
+    x = df.x,
+    y = df.y,
+    z = df.z,
+    mode = "lines+markers",
+    # marker_size = 2
+
+    # line_color="white",
+    line_size=0.5,
+    # lines_size=10,
+    marker_size=2
+
+    # showlegend=false
+)
+
+plot([
+    # traces...,
+    trace_scatter,
+    # trace_bg
+])
+
 
 ##
 

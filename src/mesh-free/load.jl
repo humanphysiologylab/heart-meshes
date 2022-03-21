@@ -52,7 +52,8 @@ I_tetra = read_binary(filename_I_tetra, Int32)
 filename_J_tetra = joinpath(folder, "M$heart/J_tetra.int32")
 J_tetra = read_binary(filename_J_tetra, Int32)
 
-A_tetra = sparse(I_tetra, J_tetra, trues(size(I_tetra)))
+A_tetra = sparse(I_tetra, J_tetra, ones(size(I_tetra)))
+A_tetra.nzval .= 1
 
 ##
 

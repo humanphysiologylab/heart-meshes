@@ -4,7 +4,8 @@ function run_gradient_descent(
     t_start = 7500.,
     cb_capacity = 100,
     cb_threshold = 1e-3,
-    step = -100
+    step = -100,
+    strategy = :random
 )
 
     index_tetrahedron = isnothing(i) ? rand(1:nv(mesh.graph_elements)) : i
@@ -26,9 +27,13 @@ function run_gradient_descent(
     push!(rows, row)
 
     while true
-        t_next, p_next, i_next = gradient_descent_step(t_next, p_next, i_next, mesh; step)
+        t_next, p_next, i_next = gradient_descent_step(t_next, p_next, i_next, mesh; step, strategy)
         push!(cb, t_next)
-        terminate(cb, cb_threshold) && break
+        # terminate(cb, cb_threshold) && break
+        if terminate(cb, cb_threshold)
+            @info "terminated at $t_next"
+            break
+        end
         row = (t = t_next, x = p_next[1], y = p_next[2], z = p_next[3], i = i_next)
         push!(rows, row)
 
