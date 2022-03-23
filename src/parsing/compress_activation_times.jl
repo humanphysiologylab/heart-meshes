@@ -26,6 +26,8 @@ function compress_activation_times(
         times_sorted[start:stop] .= sort(times_sorted[start:stop])
     end
 
+    starts = eltype(vertices).(starts)
+    
     return starts, times_sorted, n_points_found
 
 end

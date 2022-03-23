@@ -6,7 +6,22 @@ function load_adj_matrix(
     folder::String,
     incidence_only::Bool = true;
     IntType = Int32,
-    FloatType = Float32,
+    FloatType = Float32
+)
+    I, J, V = load_IJV(folder, incidence_only; IntType, FloatType)
+    n_I = maximum(I)
+    n_J = maximum(J)
+    n = max(n_I, n_J)
+    combine = (x, y) -> x
+    adj_matrix = sparse(vcat(I, J), vcat(J, I), vcat(V, V), n, n, combine)
+end
+
+
+function load_IJV(
+    folder::String,
+    incidence_only::Bool = true;
+    IntType = Int32,
+    FloatType = Float32
 )
 
     filename_I = nothing
@@ -36,6 +51,6 @@ function load_adj_matrix(
         V = read_binary(filename_V, FloatType)
     end
 
-    adj_matrix = sparse(vcat(I, J), vcat(J, I), vcat(V, V))
+    I, J, V
 
 end

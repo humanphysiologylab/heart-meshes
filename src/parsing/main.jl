@@ -13,16 +13,19 @@ n_points_dict = Dict(
 ##
 
 heart = 13
-group = 2
+group = 4
 
 folder_rheeda = "/media/andrey/samsung-T5/HPL/Rheeda/"
 
+n_stim = 40
 rows = []
+append!(rows, fill(nothing, n_stim))
 
-Threads.@threads for i_stim in 0: 39
+Threads.@threads for i_stim in 1: n_stim
 
-    stim = string(i_stim, pad = 2)
-    msg = "$(Threads.threadid()) : $stim"
+    stim = string(i_stim - 1, pad = 2)
+    progress = .!isnothing.(rows) |> sum
+    msg = "$(Threads.threadid()) : $stim : $progress/$n_stim"
     println(msg)
 
     filename_input = joinpath(
@@ -37,11 +40,13 @@ Threads.@threads for i_stim in 0: 39
     filename_starts = joinpath(folder_write, "starts.int32")
     filename_times = joinpath(folder_write, "times.float32")
 
-    isfile(filename_starts) && continue
-    isfile(filename_times) && continue
+    # isfile(filename_starts) && continue
+    # isfile(filename_times) && continue
 
     vs, times = read_dat(filename_input)
     starts, times, n_points_found = compress_activation_times(vs, times, n_points_dict[heart])
+
+    # @show length(starts)
 
     mkpath(folder_write)
     write(filename_starts, starts)
@@ -54,7 +59,7 @@ Threads.@threads for i_stim in 0: 39
         :group => group,
         :stim => i_stim
     )
-    push!(rows, row)
+    rows[i_stim] = row
 
 end
 
@@ -63,3 +68,5 @@ end
 df = DataFrame(rows)
 filename_csv = joinpath(folder_rheeda, "activation-times", "M$heart-G$(group).csv")
 CSV.write(filename_csv, df)
+
+##
