@@ -1,10 +1,23 @@
 include("load_files.jl")
 
 ##
-folder = "/media/andrey/1TBlob/HPL/Data/Rheeda/M15"
+
+heart = 13
+
+folder = "/Volumes/samsung-T5/HPL/Rheeda/M$heart"
+# folder = "/media/andrey/1TBlob/HPL/Data/Rheeda/M15"
+
+filename_points = joinpath(folder, "M$(heart)_IRC_3Dpoints.float32")
+points = read_binary(filename_points, Float32, (3, :))
+# points = permutedims(points, (2, 1))
+
+filename_tetra = joinpath(folder, "M$(heart)_IRC_tetra.int32")
+tetra = read_binary(filename_tetra, Int32, (4, :))
+# tetra = permutedims(tetra, (2, 1))
+tetra .+= 1
 
 ##
-filename_region = joinpath(folder, "M15_IRC_region.int32")
+filename_region = joinpath(folder, "M$(heart)_IRC_region.int32")
 region = read_binary(filename_region, Int32)
 
 ##
@@ -12,7 +25,7 @@ using StatsBase
 v_counts = countmap(region)
 
 n_regions = length(v_counts)
-n_points = size(points)[2]
+n_points = size(points, 2)
 
 region_uniques = sort(unique(region))
 region_map = Dict(zip(region_uniques, 1:n_regions))
@@ -20,7 +33,7 @@ region_map = Dict(zip(region_uniques, 1:n_regions))
 ##
 region_points = zeros(Bool, (n_regions, n_points))
 
-for column in eachcol(tetra .+ 1)
+for column in eachcol(tetra)
     for (i_tetra, i_points) in enumerate(column)
         r_i = region[i_tetra]
         r_axis = region_map[r_i]
@@ -29,7 +42,7 @@ for column in eachcol(tetra .+ 1)
 end
 
 ##
-filename_points_region = joinpath(folder, "M15_IRC_points_region.bool")
+filename_points_region = joinpath(folder, "M$(heart)_IRC_points_region.bool")
 
 open(filename_points_region, "w") do f
     write(f, region_points)

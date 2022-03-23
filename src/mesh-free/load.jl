@@ -21,11 +21,9 @@ include("baricenter.jl")
 include("find_next_tetrahedron.jl")
 include("find_nearest_times.jl")
 include("plot_tetrahedron_edges.jl")
-include("gradient_descent_step.jl")
 include("plotly_helpers.jl")
 include("../rotors/extend_area.jl")
 
-include("terminate.jl")
 include("run_gradient_descent.jl")
 
 ##
