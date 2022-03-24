@@ -4,10 +4,9 @@ include("calculate_conduction_map.jl")
 
 ##
 
-folder_rheeda = "/media/andrey/samsung-T5/HPL/Rheeda/"
+folder_rheeda = "/Volumes/samsung-T5/HPL/Rheeda/"
 
-heart = 13
-group = 1
+heart = 15
 
 folder_adj_matrix = joinpath(folder_rheeda, "geometry", "M$heart", "adj-vertices")
 A = load_adj_matrix(folder_adj_matrix, false)
@@ -16,40 +15,44 @@ A = load_adj_matrix(folder_adj_matrix, false)
 
 cv_min = 10.  # 10 um/s = 1 cm/s
 
-Threads.@threads for i_stim in 0: 39
+for group in 1: 4
 
-    # i_stim = 0
+    println("Group: ", group)
 
-    stim = string(i_stim, pad = 2)
-    msg = "$(Threads.threadid()) : $stim"
-    println(msg)
+    Threads.@threads for i_stim in 0: 39
 
-    subfolder = joinpath("M$heart", "G$group", "S$stim")
+        stim = string(i_stim, pad = 2)
+        msg = "$(Threads.threadid()) : $stim"
+        println(msg)
 
-    folder_activation = joinpath(folder_rheeda, "activation-times", subfolder)
-    filename_starts = joinpath(folder_activation, "starts.int32")
-    filename_times = joinpath(folder_activation, "times.float32")
+        subfolder = joinpath("M$heart", "G$group", "S$stim")
 
-    folder_conduction = joinpath(folder_rheeda, "conduction", subfolder)
-    filename_conduction = joinpath(folder_conduction, "conduction.float32")
+        folder_activation = joinpath(folder_rheeda, "activation-times", subfolder)
+        filename_starts = joinpath(folder_activation, "starts.int32")
+        filename_times = joinpath(folder_activation, "times.float32")
 
-    # isfile(filename_conduction) && continue
+        folder_conduction = joinpath(folder_rheeda, "conduction", subfolder)
+        filename_conduction = joinpath(folder_conduction, "conduction.float32")
 
-    starts = read_binary(filename_starts, Int32)
-    times = read_binary(filename_times, Float32)
+        isfile(filename_conduction) && continue
 
-    conduction = calculate_conduction_map(A, times, starts; cv_min)
-    mkpath(folder_conduction)
-    write(filename_conduction, conduction)
+        starts = read_binary(filename_starts, Int32)
+        times = read_binary(filename_times, Float32)
+
+        conduction = calculate_conduction_map(A, times, starts; cv_min)
+        mkpath(folder_conduction)
+        write(filename_conduction, conduction)
+
+    end
 
 end
 
 ##
 
-mask_nan = .!isnan.(conduction)
-mask_zero = .!iszero.(conduction)
-histogram(log10.(conduction[mask_nan .& mask_zero]))
-histogram(conduction[mask_nan .& mask_zero])
+# mask_nan = .!isnan.(conduction)
+# mask_zero = .!iszero.(conduction)
+# histogram(log10.(conduction[mask_nan .& mask_zero]))
+# histogram(conduction[mask_nan .& mask_zero])
 
 # mean(conduction[.!isnan.(conduction)])
 

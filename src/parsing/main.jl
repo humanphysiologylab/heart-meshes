@@ -12,10 +12,10 @@ n_points_dict = Dict(
 
 ##
 
-heart = 13
+heart = 15
 group = 4
 
-folder_rheeda = "/media/andrey/samsung-T5/HPL/Rheeda/"
+folder_rheeda = "/Volumes/samsung-T5/HPL/Rheeda/"
 
 n_stim = 40
 rows = []
