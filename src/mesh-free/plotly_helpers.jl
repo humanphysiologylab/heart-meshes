@@ -1,3 +1,6 @@
+using PlotlyJS
+
+
 function create_heart_trace(points; stride = 100)
 
     scatter3d(;

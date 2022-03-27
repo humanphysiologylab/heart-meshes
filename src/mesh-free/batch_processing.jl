@@ -1,18 +1,15 @@
-using SparseArrays
-using Graphs, SimpleWeightedGraphs
 using ProgressMeter
-using JSON3
 using DataFrames, CSV
 
 include("../io/read_binary.jl")
 include("../io/load_adj_matrix.jl")
-include("run_gradient_descent.jl")
-
-include("../ActivatedGraphs/ActivatedGraphs.jl")
-using .ActivatedGraphs
 
 include("../ActivatedMeshes/ActivatedMeshes.jl")
-using .ActivatedMeshes
+include("../ActArrays/ActArrays.jl")
+
+include("run_gradient_descent.jl")
+include("find_period.jl")
+include("load_mesh.jl")
 
 ##
 
@@ -25,30 +22,31 @@ folders_try = [
 ]
 folder = folders_try[findfirst(isdir.(folders_try))]
 
-filename_tetra = joinpath(folder, "M$heart/M$(heart)_IRC_tetra.int32")
-tetra = read_binary(filename_tetra, Int32, (4, :))
-tetra = permutedims(tetra, (2, 1))
-tetra .+= 1
+folder_geometry_heart = joinpath(folder, "geometry", "M$heart")
+folder_activation = joinpath(folder, "activation-times")
 
-filename_points = joinpath(folder, "M$heart/M$(heart)_IRC_3Dpoints.float32")
+##
+
+filename_elements = joinpath(folder_geometry_heart, "elements.int32")
+elements = read_binary(filename_elements, Int32, (4, :))
+elements = permutedims(elements, (2, 1))
+elements .+= 1
+
+filename_points = joinpath(folder_geometry_heart, "points.float32")
 points = read_binary(filename_points, Float32, (3, :))
 points = permutedims(points, (2, 1))
 
-filename_I_tetra = joinpath(folder, "M$heart/I_tetra.int32")
-I_tetra = read_binary(filename_I_tetra, Int32)
-filename_J_tetra = joinpath(folder, "M$heart/J_tetra.int32")
-J_tetra = read_binary(filename_J_tetra, Int32)
+folder_adj_vertices = joinpath(folder_geometry_heart, "adj-vertices")
+A_vertices = load_adj_matrix(folder_adj_vertices, false)
 
-A_tetra = sparse(I_tetra, J_tetra, ones(size(I_tetra)))
-A_tetra.nzval .= 1
-
-A_vertices = load_adj_matrix(joinpath(folder, "M$heart/adj_matrix"), false)
+folder_adj_elements = joinpath(folder_geometry_heart, "adj-elements")
+A_elements = load_adj_matrix(folder_adj_elements)
 
 ##
 
 point2element = [Int[] for i in 1:size(points, 1)]
 
-@showprogress for (i_element, element) in enumerate(eachrow(tetra))
+@showprogress for (i_element, element) in enumerate(eachrow(elements))
     for i_point in element
         push!(point2element[i_point], i_element)
     end
@@ -56,92 +54,75 @@ end
 
 ##
 
-function load_mesh(heart, group, stim; A_vertices, A_tetra, tetra, points)
+filename_csv = joinpath(folder, "rotors", "connected_components.csv")
+df_meta = CSV.read(filename_csv, DataFrame)
 
-    stim = string(stim, pad = 2)
+##
 
-    filename_times = joinpath(
-        folder,
-        "data-light/M$heart/G$group/S$stim/times.float32"
+folder_save = joinpath(folder, "rotors", "trajectories")
+
+rows_threads = [[] for i in 1:Threads.nthreads()]
+
+Threads.@threads for row in eachrow(df_meta)
+# for row in eachrow(df_meta)
+
+    filename_save = joinpath(
+        folder_save,
+        "M$(row.heart)-G$(row.group)-S$(row.stim)-$(row.component_id).csv"
     )
-    times = read_binary(filename_times, Float32)
 
-    filename_starts = joinpath(
-        folder,
-        "data-light/M$heart/G$group/S$stim/indices_start.int32"
+    # isfile(filename_save) && continue
+    # row.t_end < 7490 && continue
+    # row.group ≠ 4 && continue
+    row.heart ≠ heart && continue
+
+    i_element_start = point2element[row.v_start] |> first
+
+    mesh = load_mesh(
+        row.heart,
+        row.group,
+        row.stim;
+        A_vertices,
+        A_elements,
+        elements,
+        points,
+        folder_activation
     )
-    starts = read_binary(filename_starts, Int32)
 
-    mesh = ActivatedMesh(A_vertices, A_tetra, tetra, starts, Dict(:times => times), Dict(:points => points))
+    t_stop = row.t_start + 50.
+    step = -100.
+    df = run_gradient_descent(mesh, i_element_start; step, t_stop)
+
+    lifetime_min = 1000.
+    t_start, t_end = minimum(df.t), maximum(df.t)
+    lifetime = t_end - t_start
+    lifetime < lifetime_min && continue
+
+    period = find_period(df, mesh)
+
+    t_id = Threads.threadid()
+    row = Dict(
+        :heart => row.heart,
+        :group => row.group,
+        :stim => row.stim,
+        :component_id => row.component_id,
+        :thread_id => t_id,
+        :lifetime => lifetime,
+        :t_start => t_start,
+        :t_end => t_end,
+        :period => period
+    )
+    push!(rows_threads[Threads.threadid()], row)
+
+    CSV.write(filename_save, df)
 
 end
 
 ##
 
-folder_jsons = joinpath(folder, "data/rotor_CL_cc")
-folder_save = joinpath(folder, "data/rotor-trajectory-mar21")
+df_params = DataFrame(
+    Iterators.flatten(rows_threads)
+)
 
-for filename_json in readdir(folder_jsons, join=true)
-
-    @show filename_json
-    rotor = JSON3.read(read(filename_json, String))
-    i_heart = rotor[:heart]
-    if i_heart ≠ heart
-        continue
-    end
-
-    i_group = rotor[:group]
-    i_stim = rotor[:stim]
-    i_rotor = rotor[:rotor]
-
-    filename_body = splitdir(filename_json)[2]
-    filename_body = split(filename_body, ".")[1]
-    filename_save = joinpath(folder_save, filename_body * ".csv")
-
-    if isfile(filename_save)
-        continue
-    end
-
-    @show i_heart, i_group, i_stim
-
-    # break
-
-    # ag = load_activated_graph((i_heart, i_group, i_stim); adj_matrix)
-    # ag = nothing
-
-    mesh = nothing
-
-    try  # soft local scope
-        mesh = load_mesh(i_heart, i_group, i_stim; A_vertices, A_tetra, tetra, points)
-    catch e
-        @warn "loading failed: $e"
-        continue
-    end
-
-    # vertex_ids = rotor[:vertices]
-    # vertices_unique = unique(vertex_ids)
-
-    # times_rotor_last = ag[:times][ag.stops[vertices_unique]]
-    # vertex_last = vertices_unique[findmax(times_rotor_last)[2]]
-    # vertices_ids[findmax(times_rotor)[2]]
-
-    # indices_area = extend_area(ag.graph, vertices_unique, 1e3)
-    # i = indices_area[findmax(ag[:times][indices_area])[2]]
-
-    # indices_times_last = mesh.stops[vertices_unique]
-    # times_last = mesh[:times][indices_times_last]
-    # time_last, index_time_last = findmax(times_last)
-    # index_vertex = indices_times_last[index_time_last]
-
-    vertex_start = rotor[:vertices] |> first
-    tetrahedron_start = point2element[vertex_start] |> first
-
-    # @show tetrahedron_start, time_last
-
-    df = run_gradient_descent(mesh, tetrahedron_start, step=-100, strategy=:random)
-    @show df.t |> last
-    CSV.write(filename_save, df)
-
-    # break
-
-end
+filename_write = joinpath(folder, "rotors", "M$heart-rotor-params.csv")
+CSV.write(filename_write, df_params)

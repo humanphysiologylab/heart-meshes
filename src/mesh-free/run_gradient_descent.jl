@@ -17,13 +17,15 @@ function run_gradient_descent(
     cb_capacity = 100,
     cb_threshold = 1e-3,
     step = -100,
+    t_stop = nothing,
     strategy = :random
 )
 
-    index_tetrahedron = isnothing(i) ? rand(1:nv(mesh.graph_elements)) : i
+    n_elements = nv(mesh.graph_elements)
+    index_tetrahedron = isnothing(i) ? rand(1:n_elements) : i
 
     t = mesh.elements[index_tetrahedron, :]
-    t_coords = get_tetra_points(mesh, index_tetrahedron)
+    t_coords = get_element_points(mesh, index_tetrahedron)
     t_center = mean(t_coords, dims=1)[1, :]
     t_times = find_nearest_times(mesh, t, t_start)
     t_start = mean(t_times)
@@ -43,13 +45,15 @@ function run_gradient_descent(
         push!(cb, t_next)
         # terminate(cb, cb_threshold) && break
         if terminate(cb, cb_threshold)
-            @info "terminated at $t_next"
+            # @info "terminated at $t_next"
             break
         end
         row = (t = t_next, x = p_next[1], y = p_next[2], z = p_next[3], i = i_next)
         push!(rows, row)
 
-        t_next < 2550. && break
+        isnothing(t_stop) && continue
+        (isone ∘ sign)(step) && (t_next > t_stop) && break
+        (isone ∘ sign)(-step) && (t_next < t_stop) && break
 
     end
 

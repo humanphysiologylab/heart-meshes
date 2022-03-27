@@ -1,16 +1,17 @@
-include("outer_facet.jl")
 using StatsBase
 
+include("outer_facet.jl")
 
-function edge_hopping(i_tetra_start, point, points, tetra, A_tetra; save_trace=false)
+
+function edge_hopping(i_tetra_start, point, points, elements, A_elements; save_trace=false)
 
     trace = save_trace ? [i_tetra_start] : nothing
 
-    rows = rowvals(A_tetra)
+    rows = rowvals(A_elements)
 
     while true
 
-        point_indices = tetra[i_tetra_start, :]
+        point_indices = elements[i_tetra_start, :]
         coords_tetra = points[point_indices, :]
         facet_indices = select_outer_facet(point, coords_tetra)
 
@@ -24,10 +25,10 @@ function edge_hopping(i_tetra_start, point, points, tetra, A_tetra; save_trace=f
         point_indices_facet = point_indices[facet_indices]
         # @show point_indices_facet
 
-        j_tetras = rows[nzrange(A_tetra, i_tetra_start)]
+        j_tetras = rows[nzrange(A_elements, i_tetra_start)]
         i_tetra_proposed = nothing
         for j in j_tetras
-            is_shared_facet = all(point_indices_facet .∈ (tetra[j, :],))
+            is_shared_facet = all(point_indices_facet .∈ (elements[j, :],))
             if is_shared_facet
                 i_tetra_proposed = j
                 break
@@ -52,18 +53,18 @@ function edge_hopping(i_tetra_start, point, points, tetra, A_tetra; save_trace=f
 end
 
 
-function edge_hopping(i_tetra_start, point, mesh::ActivatedMesh; save_trace=false)
+function edge_hopping(i_element_start, point, mesh::ActivatedMesh; save_trace=false)
 
     points = mesh[:points]
-    tetra = mesh.elements
-    A_tetra = mesh.graph_elements.weights
+    elements = mesh.elements
+    A_elements = mesh.graph_elements.weights
 
     edge_hopping(
-        i_tetra_start,
+        i_element_start,
         point,
         points,
-        tetra,
-        A_tetra;
+        elements,
+        A_elements;
         save_trace
     )
 

@@ -23,6 +23,11 @@ struct ActArray{T<:Integer}
 end
 
 
+function Base.length(a::ActArray)
+    length(a.starts)
+end
+
+
 function Base.getindex(a::ActArray, key::Symbol)
     a.arrays[key]
 end
