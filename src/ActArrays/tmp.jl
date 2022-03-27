@@ -21,3 +21,29 @@ times = read_binary(filename_times, Float32)
 conduction = read_binary(filename_conduction, Float32)
 
 a = ActArray(starts, Dict(:times => times, :conduction => conduction))
+
+##
+
+using BenchmarkTools
+
+# faster
+@benchmark conduction_mean = reduce(
+    a,
+    :conduction,
+    x -> takewhile(isfinite, x) |> mean
+)
+
+# slower
+@benchmark conduction_mean = reduce(
+    a,
+    :conduction,
+    x -> drop(reverse(x), 1) |> mean
+)
+
+##
+
+v = get_major_index(
+       a,
+       findmin(a[:times])[2]
+)
+subarrays = get_subarrays(a, v)

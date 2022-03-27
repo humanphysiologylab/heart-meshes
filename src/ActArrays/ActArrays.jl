@@ -38,7 +38,7 @@ function Base.reduce(a::ActArray, key::Symbol, op=sum)
 
     n = length(a.starts)
     result = map(1: n) do i
-        get_vertex_vector(a, i, key) |> op
+        get_subarray(a, i, key) |> op
     end
 
 end
@@ -52,6 +52,16 @@ end
 function get_subarray(a::ActArray, i::Integer, key::Symbol)
     indices = a.starts[i] : a.stops[i]
     @view a.arrays[key][indices]
+end
+
+
+function get_subarrays(a::ActArray, i::Integer)
+    result = Dict{Symbol, SubArray}()
+    for (k, v) in a.arrays
+        indices = a.starts[i] : a.stops[i]
+        result[k] = @view v[indices]
+    end
+    result
 end
 
 

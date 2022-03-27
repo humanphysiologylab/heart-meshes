@@ -1,109 +1,51 @@
 include("../io/load_adj_matrix.jl")
-include("../rotors/ActivatedGraphs.jl")
-include("../misc/pyplot.jl")
-include("../misc/load_things.jl")
-include("../conduction/collect_counts_n_sums.jl")
+include("../io/load_things.jl")
+include("../io/load_arrays.jl")
+
+include("../ActivatedGraphs/ActivatedGraphs.jl")
+include("../ActArrays/ActArrays.jl")
+
+include("process_component.jl")
 
 using Graphs
 using StatsBase
-using .ActivatedGraphs
-# using .ActivatedGraphs: find_vertex_id  # this is not exported
+using Base.Iterators
+using DataFrames
+
+op_reduce(x) = takewhile(isfinite, x) |> mean
 
 ##
 
-i_heart = 13
-adj_matrix = load_adj_matrix("/media/andrey/ssd2/WORK/HPL/Data/rheeda/M$i_heart/adj_matrix", false)
-points = read_binary(
-    "/media/andrey/ssd2/WORK/HPL/Data/rheeda/M$i_heart/M$(i_heart)_IRC_3Dpoints.float32",
-    Float32,
-    (3, :),
-)
+folder_rheeda = "/Volumes/samsung-T5/HPL/Rheeda/"
 
-##
-i_heart = 13
-i_group = 1
-i_stim = 0
-
-ag = load_activated_graph((i_heart, i_group, i_stim))
-# ag.scalars[:points] = load_points(i_heart)
-##
-
-function find_indices_breaks(ag, conduction_threshold = 1)
-
-    ag[:conduction][ag.stops] .= 1
-
-    conduction_percent_sum, conduction_percent_count =
-        collect_counts_n_sums(ag[:conduction], ag.starts, ag.stops)
-
-    mask_nonzeros = .!iszero.(conduction_percent_count)
-
-    conduction_percent_mean = zeros(size(conduction_percent_sum))
-    conduction_percent_mean[mask_nonzeros] =
-        conduction_percent_sum[mask_nonzeros] ./ conduction_percent_count[mask_nonzeros]
-
-    indices_breaks = findall(conduction_percent_mean .< conduction_threshold)
-
-end
+heart = 15
+folder_adj_matrix = joinpath(folder_rheeda, "geometry", "M$heart", "adj-vertices")
+A = load_adj_matrix(folder_adj_matrix)
+a = load_arrays(heart, 1, 13; folder_rheeda)
 
 ##
 
-indices_breaks = find_indices_breaks(ag)
-ag_breaks = ActivatedGraphs.induced_subgraph(ag, indices_breaks)
-cc = connected_components(ag_breaks.graph)
+c_mean = reduce(a, :conduction, op_reduce)
+indices_breaks = findall(c_mean .< 1.)
+g = SimpleGraph(A)
+cc = connected_components(g[indices_breaks])
 cc = sort(cc, by=length, rev=true)
+cc = [indices_breaks[c] for c in cc]
 
 ##
 
-dt_max_array = fill(NaN, length(cc))
-lifetime_array = fill(NaN, length(cc))
-CL_array = deepcopy(dt_max_array)
-
-t_onset = 3000
-t_terminate_min = 7450
-len_times_min = 10
-
+rows = []
+component_length_min = 100
 for (i, component) in enumerate(cc)
-
-    times = map(component) do i
-        ts = get_vertex_vector(ag_breaks, i, :times)
-        ts = ts[searchsortedfirst(ts .> t_onset, true) : end]
+    length(component) < component_length_min && continue
+    rows_component = process_component(component, a, dt_max=50.)
+    isnothing(rows_component) && continue
+    for row in rows_component
+        row[:component_id] = i
     end
-
-    times = vcat(times...)
-    (length(times) < len_times_min) && continue
-
-    dtimes = diff(times)
-    CL = mode(dtimes[0 .< dtimes .< 1000])
-    CL_array[i] = CL
-
-    times = sort(times)
-    # (last(times) < t_terminate_min) && continue
-    
-    # index_onset = findfirst(times .> t_onset)
-    # isnothing(index_onset) && continue
-    # times = times[index_onset: end]
-
-    dt_max = maximum(diff(times))
-    dt_max_array[i] = dt_max
-
-    lifetime = last(times) - first(times)
-    lifetime_array[i] = lifetime
+    append!(rows, rows_component)
 end
-
-##
-
-dt_max_min = dt_max_array[dt_max_array .|> isnan .|> !] |> minimum
-mask_rotor = (dt_max_array .< 50) .&& (lifetime_array .> 1000)
-sum(mask_rotor)
-
-##
-plot(dt_max_array[mask_rotor], CL_array[mask_rotor], "o")
-plot(dt_max_array, CL_array, ".")
-
-##
-
-plot(dt_max_array[mask_rotor], lifetime_array[mask_rotor], "o")
-plot(dt_max_array, lifetime_array, ".")
+df = DataFrame(rows)
 
 
 ##
