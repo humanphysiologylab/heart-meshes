@@ -1,25 +1,31 @@
+inner_channels = 10
+conv_filter = (9,)
+pool_window = (2,)
+
 model_conv = Chain(
+
+    x -> normalise(x, dims=1),
     
-    Conv((9,), 3 => 3; dilation=2, pad=SamePad()),
-    BatchNorm(3, relu),
+    Conv(conv_filter, 3 => inner_channels; dilation=2, pad=SamePad()),
+    BatchNorm(inner_channels, relu),
     
-    Conv((9,), 3 => 3; dilation=2, pad=SamePad()),
-    BatchNorm(3, relu),
+    Conv(conv_filter, inner_channels => inner_channels; dilation=2, pad=SamePad()),
+    BatchNorm(inner_channels, relu),
 
-    MaxPool((2,)),
+    MaxPool(pool_window),
 
-    Conv((9,), 3 => 3; pad=SamePad()),
-    BatchNorm(3, relu),
+    Conv(conv_filter, inner_channels => inner_channels; pad=SamePad()),
+    BatchNorm(inner_channels, relu),
 
-    Conv((9,), 3 => 3; pad=SamePad()),
-    BatchNorm(3, relu),
+    Conv(conv_filter, inner_channels => inner_channels; pad=SamePad()),
+    BatchNorm(inner_channels, relu),
 
-    MaxPool((2,)),
+    MaxPool(pool_window),
 
-    Conv((9,), 3 => 3; pad=SamePad()),
-    BatchNorm(3, relu),
+    Conv(conv_filter, inner_channels => inner_channels; pad=SamePad()),
+    BatchNorm(inner_channels, relu),
 
-    Conv((9,), 3 => 1; pad=SamePad()),
+    Conv(conv_filter, inner_channels => 1; pad=SamePad()),
     # BatchNorm(10, relu),
 
     Upsample(4)  # [MaxPool] * 2
