@@ -1,11 +1,20 @@
+using Flux
+
 inner_channels = 10
-conv_filter = (9,)
+conv_filter = (13,)
 pool_window = (2,)
 
-model_conv = Chain(
+n_downsampling = 10
 
-    x -> normalise(x, dims=1),
-    
+preprocessor = Chain(
+    MeanPool((n_downsampling,)),
+    x -> Flux.normalise(x, dims=1)
+)
+
+model = Chain(
+
+    preprocessor,
+
     Conv(conv_filter, 3 => inner_channels; dilation=2, pad=SamePad()),
     BatchNorm(inner_channels, relu),
     
@@ -14,10 +23,18 @@ model_conv = Chain(
 
     MaxPool(pool_window),
 
-    Conv(conv_filter, inner_channels => inner_channels; pad=SamePad()),
+    Conv(conv_filter, inner_channels => inner_channels; dilation=2, pad=SamePad()),
     BatchNorm(inner_channels, relu),
 
-    Conv(conv_filter, inner_channels => inner_channels; pad=SamePad()),
+    Conv(conv_filter, inner_channels => inner_channels; dilation=2, pad=SamePad()),
+    BatchNorm(inner_channels, relu),
+
+    MaxPool(pool_window),
+
+    Conv(conv_filter, inner_channels => inner_channels; dilation=2, pad=SamePad()),
+    BatchNorm(inner_channels, relu),
+
+    Conv(conv_filter, inner_channels => inner_channels; dilation=2, pad=SamePad()),
     BatchNorm(inner_channels, relu),
 
     MaxPool(pool_window),
@@ -26,9 +43,6 @@ model_conv = Chain(
     BatchNorm(inner_channels, relu),
 
     Conv(conv_filter, inner_channels => 1; pad=SamePad()),
-    # BatchNorm(10, relu),
 
-    Upsample(4)  # [MaxPool] * 2
+    Upsample(n_downsampling * pool_window[1]^3)
 )
-
-# n_pools = [typeof(layer) <: MaxPool for layer in model_conv.layers] |> sum

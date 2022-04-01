@@ -1,40 +1,23 @@
 using DataFrames, CSV
+using Statistics
 
-folder_validation = "/Users/andrey/Work/HPL/data/rotors-marked-up"
-
-xs = []
-ys = []
-
-for filename in readdir(folder_validation, join=true)
-
-    local df = CSV.read(filename, DataFrame)
-    df = df[1 : 10 : end, :]
-
-    X = df[:, [:x, :y, :z]] |> Matrix{Float32}
-    Y = df[:, [:class]] |> Matrix{Float32}
-
-    X = diff(X, dims=1)
-    Y = Y[1: end-1, :]
-
-    n = 8
-    L = (size(X, 1) ÷ n) * n
-    X = X[1:L, :]
-    Y = Y[1:L, :]
-
-    X = reshape(X, size(X)..., 1)
-    Y = reshape(Y, size(Y)..., 1)
-
-    # X = normalise(X, dims=1)
-
-    push!(xs, X)
-    push!(ys, Y)
-
-    # reverse time
-    push!(xs, X[end:-1:1, :, :])
-    push!(ys, Y[end:-1:1, :, :])
-
-end
+include("split_train_test.jl")
+include("load_train_data.jl")
 
 ##
 
-val_loader = zip(xs, ys)
+folder_validation = "/Users/andrey/Work/HPL/data/rotors-marked-up-v2"
+
+filenames = readdir(folder_validation, join=false)
+filenames_test, filenames_train = split_train_test(filenames)
+
+##
+
+train_loader = zip(load_train_data(filenames_train, folder_validation)...)
+test_loader = zip(load_train_data(filenames_test, folder_validation)...)
+
+##
+
+weight_rotor = [y for (x, y) in train_loader] |> Iterators.flatten |> mean
+
+##

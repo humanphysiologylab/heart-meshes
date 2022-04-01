@@ -1,16 +1,15 @@
 using UnicodePlots
 
 
-function plot_history(history, key="loss")
+function plot_history(history, key="loss"; yscale=:identity)
 
-    names = "train", "test", "val"
+    names = "train", "test" # "val"
     keys = ["$(key)_$(name)" for name in names]
 
     values = history[:, keys] |> Array
     min_loss = minimum(values)
     max_loss = maximum(values)
     ylim = min_loss, max_loss
-    yscale = :log10
 
     plt = lineplot(values[:, 1], name=keys[1]; yscale, ylim)
 

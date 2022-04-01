@@ -1,3 +1,7 @@
+using Flux: label_smoothing, logitbinarycrossentropy
+include("accuracy.jl")
+
+
 function evaluate(model, data_loader; α_smooth=1e-6)
 
     acc_num = 0.
