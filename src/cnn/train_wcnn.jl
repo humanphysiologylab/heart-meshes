@@ -1,29 +1,22 @@
 using Flux, Flux.Optimise
-using Flux: binary_focal_loss
+using Flux.Losses: label_smoothing, logitbinarycrossentropy, binary_focal_loss
 using ProgressMeter
 using BSON: @save, @load
 
-
-include("model.jl")
+include("model_wcnn.jl")
 include("evaluate.jl")
 include("plot_history.jl")
 
 folder_model = "/Users/andrey/Work/HPL/projects/rheeda/heart-meshes/flux-models/"
-filename_model = joinpath(folder_model, "model-latest.bson")
+filename_model = joinpath(folder_model, "model-wcnn-latest.bson")
 
 opt = ADAM(1e-3)
-α_smooth = 1e-6  # 0.1f0
+α_smooth = 0. # 1e-6  # 0.1f0
 
 score_best = 0.
 history = []
-# let
-#     row = Dict{Symbol, Any}(:epoch => 0)
-#     row[:loss_train], row[:score_train] = evaluate(model, train_loader; α_smooth=α_smooth)
-#     row[:loss_test], row[:score_test] = evaluate(model, test_loader; α_smooth=α_smooth)
-#     push!(history, row)
-# end
 
-@showprogress for epoch in 1: 100
+@showprogress for epoch in 1: 10
 
     row = Dict{Symbol, Any}(:epoch => epoch)
 
@@ -39,9 +32,8 @@ history = []
             # y_smooth = (α_smooth ≈ 0) ? y : label_smoothing(y, α_smooth, dims=0)
             # logitbinarycrossentropy(ŷ, y_smooth)
 
-            binary_focal_loss(σ.(ŷ), y)
-
-            # Flux.binary_focal_loss(ŷ .|> σ, y_smooth)
+            y1 = label_smoothing(y, 0.2f0, dims=0)
+            binary_focal_loss(σ.(ŷ), y1, γ=0, ϵ=1e-6)
 
         end
         Optimise.update!(opt, ps, grads)
@@ -56,11 +48,12 @@ history = []
     row[:loss_test], row[:score_test] = evaluate(model, test_loader; α_smooth=α_smooth)
 
     if row[:score_test] > score_best
-        # @save filename_model model
+        @save filename_model model
         global score_best = row[:score_test]
     end
 
     push!(history, row)
+    @show score_best
 
 end
 
@@ -69,3 +62,8 @@ history = DataFrame(history)
 plot_history(history) |> println
 plot_history(history, "score") |> println
 @show score_best
+
+
+##
+
+# @load filename_model model

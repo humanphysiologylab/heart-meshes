@@ -141,28 +141,3 @@ filename_pred = "../../pred_real.csv"
 CSV.write(filename_pred, df_pred)
 
 ##
-
-folder = "/Volumes/samsung-T5/HPL/Rheeda/rotors/trajectories_interp/"
-folder_save = "/Users/andrey/Work/HPL/data/rotors-predict-v2"
-
-@showprogress for filename in readdir(folder)
-
-    filename_full = joinpath(folder, filename)
-    df = CSV.read(filename_full, DataFrame)
-
-    x = df[:, [:x, :y, :z]] |> Matrix{Float32}
-    x = diff(x, dims=1)
-    x = x[1:end-1, :]
-    x = reshape(x, size(x)..., 1)
-
-    y_pred = model(x) .|> σ
-    y_pred = y_pred[:]
-
-    df = df[1:length(y_pred), :]
-
-    df[:, :class] = y_pred
-
-    filename_pred = joinpath(folder_save, filename)
-    CSV.write(filename_pred, df)
-
-end
