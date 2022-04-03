@@ -1,4 +1,4 @@
-folder = "/Users/andrey/Work/HPL/data/rotors-predict"
+folder = "/Users/andrey/Work/HPL/data/rotors-interp"
 folder_save = "/Users/andrey/Work/HPL/data/rotors-predict-v2"
 
 @showprogress for filename in readdir(folder)
@@ -9,7 +9,7 @@ folder_save = "/Users/andrey/Work/HPL/data/rotors-predict-v2"
     x = df[:, [:x, :y, :z]] |> Matrix{Float32}
     x = diff(x, dims=1)
 
-    L = floor(size(x, 1), base=320, digits=-1) |> Int
+    L = floor(size(x, 1), base=160, digits=-1) |> Int
     x = x[1:L, :]
 
     x = reshape(x, size(x)..., 1)

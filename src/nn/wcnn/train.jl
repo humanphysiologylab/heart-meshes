@@ -3,14 +3,16 @@ using Flux.Losses: label_smoothing, logitbinarycrossentropy, binary_focal_loss
 using ProgressMeter
 using BSON: @save, @load
 
-include("model_wcnn.jl")
+include("model.jl")
 include("evaluate.jl")
-include("plot_history.jl")
+include("../utils/plot_history.jl")
 
 folder_model = "/Users/andrey/Work/HPL/projects/rheeda/heart-meshes/flux-models/"
 filename_model = joinpath(folder_model, "model-wcnn-latest.bson")
 
-opt = ADAM(1e-3)
+η = 1e-3
+
+opt = ADAM(η)
 α_smooth = 0. # 1e-6  # 0.1f0
 
 score_best = 0.
@@ -32,8 +34,8 @@ history = []
             # y_smooth = (α_smooth ≈ 0) ? y : label_smoothing(y, α_smooth, dims=0)
             # logitbinarycrossentropy(ŷ, y_smooth)
 
-            y1 = label_smoothing(y, 0.2f0, dims=0)
-            binary_focal_loss(σ.(ŷ), y1, γ=0, ϵ=1e-6)
+            # y1 = label_smoothing(y, 0.2f0, dims=0)
+            binary_focal_loss(σ.(ŷ), y, γ=0, ϵ=1e-6)
 
         end
         Optimise.update!(opt, ps, grads)
@@ -61,9 +63,6 @@ history = DataFrame(history)
 
 plot_history(history) |> println
 plot_history(history, "score") |> println
+
+@load filename_model model
 @show score_best
-
-
-##
-
-# @load filename_model model

@@ -2,7 +2,7 @@ using Wavelets
 using Flux
 include("WCNN.jl")
 
-wt = wavelet(WT.db1)
+wt = wavelet(WT.db5)
 
 n_downsampling = 10
 

@@ -50,13 +50,14 @@ function load_train_data(filenames, folder; L::Integer, step::Integer)
 
     for filename in filenames
 
+        !startswith(filename, "M1") && continue   # stupid macos
         filename_full = joinpath(folder, filename)
 
         df = CSV.read(filename_full, DataFrame)
 
         i_starts = [
             (1: step: size(df, 1) - L)...,
-            (size(df, 1) - L : -step: 1)...
+            (size(df, 1) - L : -step: 1)...  # to save tails
         ]
         for i_start in i_starts
 
@@ -64,16 +65,10 @@ function load_train_data(filenames, folder; L::Integer, step::Integer)
                     
             X = df[i_start: i_end, [:x, :y, :z]] |> Matrix{Float32}
             Y = df[i_start: i_end, [:class]] |> Matrix{Float32}
-            # Y = 1 .- Y
         
             X = diff(X, dims=1)
             Y = Y[1: end-1, :]
-        
-            # trim 
-            # L = floor(size(X, 1), base=16 * 10, digits=-1) |> Int
-            # X = X[1:L, :]
-            # Y = Y[1:L, :]                                       
-        
+
             X = reshape(X, size(X)..., 1)
             Y = reshape(Y, size(Y)..., 1)
             
@@ -87,8 +82,6 @@ function load_train_data(filenames, folder; L::Integer, step::Integer)
             push!(ys, Y)
 
         end
-
-            # TODO: flip axes
 
     end
 
