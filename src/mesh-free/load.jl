@@ -1,19 +1,18 @@
 using SparseArrays, Random
 using DataFrames, CSV
-using PlotlyJS
 using Graphs, SimpleWeightedGraphs
 using ProgressMeter
 using DataStructures
 
-include("../ActivatedGraphs/ActivatedGraphs.jl")
-using .ActivatedGraphs
+# include("../ActivatedGraphs/ActivatedGraphs.jl")
+# using .ActivatedGraphs
 
 include("../ActivatedMeshes/ActivatedMeshes.jl")
-using .ActivatedMeshes
+include("../ActArrays/ActArrays.jl")
 
 include("../io/read_binary.jl")
 include("../io/load_geom_data.jl")
-include("../misc/load_things.jl")
+include("../io/load_things.jl")
 include("edge_hopping.jl")
 include("calculate_cv.jl")
 include("intersections.jl")
@@ -72,4 +71,6 @@ starts = read_binary(filename_starts, Int32)
 
 A_vertices = load_adj_matrix(joinpath(folder, "M$heart/adj_matrix"), false)
 
-mesh = ActivatedMesh(A_vertices, A_tetra, tetra, starts, Dict(:times => times), Dict(:points => points))
+a = ActArray(starts, Dict(:times => times))
+
+mesh = ActivatedMesh(A_vertices, A_tetra, tetra, a, Dict(:points => points))

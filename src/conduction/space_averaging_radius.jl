@@ -29,7 +29,7 @@ n_broken_stims = Dict(
 
 folder_rheeda = "/Volumes/samsung-T5/HPL/Rheeda/"
 
-heart = 13
+heart = 15
 
 folder_adj_matrix = joinpath(folder_rheeda, "geometry", "M$heart", "adj-vertices")
 A = load_adj_matrix(folder_adj_matrix, false)
@@ -72,22 +72,28 @@ fd = read_binary(filename_mask_fibrosis, Bool)
 ##
 
 n_points = size(A, 1)
-n_samples = 100_000
-samples = randperm(MersenneTwister(1234), n_points)[1:n_samples]
-r = 1e4
-
-rows = []
+n_samples = 10_000
 
 groups = 1: 4
-n_groups = length(groups)
-append!(rows, fill(missing, n_samples * n_groups))
+samples = randperm(MersenneTwister(1234), n_points)[1:n_samples]
+radia = [1e3, 3e3, 1e4, 3e4]
 
-Threads.@threads for (i, vertex_id) ∈ collect(enumerate(samples))
+iterables = Iterators.product(radia, samples) |> collect
+
+rows_threads = [[] for i in 1:Threads.nthreads()]
+
+Threads.@threads for (r, vertex_id) in iterables
 
     neighbours = neighborhood(g, vertex_id, r)
     n_points_area = length(neighbours)
 
     mean_fd = mean(fd[neighbours])
+
+    # row = Dict(
+    #     :i => vertex_id,
+    #     :mean_fd => mean_fd,
+    #     :r => r
+    # )
 
     for group in groups
         
@@ -97,6 +103,7 @@ Threads.@threads for (i, vertex_id) ∈ collect(enumerate(samples))
         wb_proba = 1 - sum(trans) / sum(act)
 
         row = Dict(
+            :r => r,
             :i => vertex_id,
             :heart => heart,
             :group => group,
@@ -106,17 +113,22 @@ Threads.@threads for (i, vertex_id) ∈ collect(enumerate(samples))
             :mean_fd => mean_fd
         )
 
-        rows[(i - 1) * n_groups + group] = row
+        t_id = Threads.threadid()
+        push!(rows_threads[t_id], row)
 
     end
 
 end
 
-df = DataFrame(rows)
+##
+
+df = DataFrame(
+    Iterators.flatten(rows_threads)
+)
 
 ##
 
 folder_save = joinpath(folder_rheeda, "averaging")
-filename_csv = joinpath(folder_save, "M$heart-$n_samples-latest.csv")
+filename_csv = joinpath(folder_save, "M$heart-$n_samples-radia-latest.csv")
 
 CSV.write(filename_csv, df)

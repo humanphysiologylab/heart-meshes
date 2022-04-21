@@ -27,10 +27,13 @@ function process_component(
             t -> any(t .== t_start),
             times_subarrays
         )
+        v_start = component[v_start]
+
         v_end = findfirst(
             t -> any(t .== t_end),
             times_subarrays
         )
+        v_end = component[v_end]
 
         periods = eltype(times_sorted)[]
         for times_subarray in times_subarrays

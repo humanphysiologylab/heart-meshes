@@ -57,7 +57,7 @@ Threads.@threads for i_stim in 1: n_stim
         :n_points_found => n_points_found,
         :heart => heart,
         :group => group,
-        :stim => i_stim
+        :stim => stim
     )
     rows[i_stim] = row
 

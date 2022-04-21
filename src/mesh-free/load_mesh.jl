@@ -1,4 +1,4 @@
-function load_mesh(heart, group, stim; A_vertices, A_elements, elements, points, folder_activation)
+function load_activation(heart, group, stim; folder_activation)
 
     stim = string(stim, pad = 2)
 
@@ -13,8 +13,12 @@ function load_mesh(heart, group, stim; A_vertices, A_elements, elements, points,
 
     a = ActArray(starts, Dict(:times => times))
 
-    mesh = ActivatedMesh(A_vertices, A_elements, elements, a, Dict(:points => points))
+end
 
+
+function load_mesh(heart, group, stim; A_vertices, A_elements, elements, points, folder_activation)
+    a = load_activation(heart, group, stim; folder_activation)
+    mesh = ActivatedMesh(A_vertices, A_elements, elements, a, Dict(:points => points))
 end
 
 ##
