@@ -1,26 +1,21 @@
 using SparseArrays, Random
 using DataFrames, CSV
-using Graphs, SimpleWeightedGraphs
+# using Graphs, SimpleWeightedGraphs
 using ProgressMeter
-using DataStructures
 
 # include("../ActivatedGraphs/ActivatedGraphs.jl")
 # using .ActivatedGraphs
-
+ 
 include("../ActivatedMeshes/ActivatedMeshes.jl")
 include("../ActArrays/ActArrays.jl")
 
 include("../io/read_binary.jl")
 include("../io/load_geom_data.jl")
 include("../io/load_things.jl")
-include("edge_hopping.jl")
-include("calculate_cv.jl")
-include("intersections.jl")
-include("baricenter.jl")
-include("find_next_tetrahedron.jl")
-include("find_nearest_times.jl")
+
 include("plot_tetrahedron_edges.jl")
 include("plotly_helpers.jl")
+
 include("../rotors/extend_area.jl")
 
 include("run_gradient_descent.jl")

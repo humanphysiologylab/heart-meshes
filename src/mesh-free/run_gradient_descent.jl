@@ -1,13 +1,10 @@
-using DataStructures
+using DataStructures  # CircularBuffer
 using DataFrames
-using StatsBase
+using StatsBase  # mean
 
 include("gradient_descent_step.jl")
 include("terminate.jl")
 include("find_nearest_times.jl")
-include("calculate_cv.jl")
-include("edge_hopping.jl")
-include("baricenter.jl")
 
 
 function run_gradient_descent(

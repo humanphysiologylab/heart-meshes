@@ -1,49 +1,34 @@
 using LinearAlgebra
 
 
-function select_outer_facet(point, element)
-    n_vertices = size(element, 1)
-    n_dims = size(element, 2)
-    
-    outerness_best = 0.
-    indices_best = zeros(Int, 3)
-    nothing_found = true
+function find_outer_facet(points::Matrix, point::Vector)
+    # works for any dimensions
+    # `points` -- coordinates of the element
+    # `point` -- point outside (or inside) of the element
 
-    for i in 1:n_vertices
-        indices = 1 .+ collect((i: i + n_dims)) .% n_vertices
-        vertices = element[indices, :]
-        outerness = calculate_outerness(point, vertices)
-        if outerness < outerness_best
-            indices_best .= indices[1: end-1]
-            nothing_found = false
-        end
-        # if is_outer_facet(point, vertices)
-        #     return indices[1: end-1]
-        # end    
+    element_size = size(points, 1)
+    facet_size = element_size - 1
+    b = ones(facet_size)
+
+    for i in 1: element_size
+
+        facet = setdiff(1: element_size, i)
+
+        # ax + by + ... + d = 1
+        # we find coeffs = (a, b, ..., d)
+        X = points[facet, :]
+        A = hcat(X, b)
+
+        rank(A) ≠ facet_size && error("invalid facet")
+
+        coeffs = nullspace(A)
+
+        pᵢ = points[i, :]
+        d1 = pᵢ ⋅ coeffs[1: end-1] + coeffs[end]
+        d2 = point ⋅ coeffs[1: end-1] + coeffs[end]
+
+        sign(d1) ≠ sign(d2) && return facet
+
     end
 
-    if !nothing_found
-        return indices_best
-    end
-
-end
-
-function calculate_facet_norm(facet)
-    o = facet[1, :]
-    n = cross(facet[2, :] - o, facet[3, :] - o)
-end
-
-
-function is_outer_facet(point, vertices)
-    outerness = calculate_outerness(point, vertices)
-    outerness < 0
-end
-
-
-function calculate_outerness(point, vertices)
-    o = vertices[1, :]
-    n = cross(vertices[2, :] - o, vertices[3, :] - o)
-    a = n ⋅ (vertices[4, :] - o)
-    b = n ⋅ (point - o)
-    outerness = a * b
 end
