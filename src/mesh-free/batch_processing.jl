@@ -10,10 +10,9 @@ include("../ActArrays/ActArrays.jl")
 include("run_gradient_descent.jl")
 include("find_period.jl")
 include("load_mesh.jl")
+include("get_labels.jl")
 
 ##
-
-heart = 15
 
 disk_path = "samsung-T5/HPL/Rheeda"
 folders_try = [
@@ -21,6 +20,8 @@ folders_try = [
     joinpath("/media/andrey", disk_path)
 ]
 folder = folders_try[findfirst(isdir.(folders_try))]
+
+heart = 13
 
 folder_geometry_heart = joinpath(folder, "geometry", "M$heart")
 folder_activation = joinpath(folder, "activation-times")
@@ -54,34 +55,32 @@ end
 
 ##
 
-filename_csv = joinpath(folder, "rotors", "connected_components.csv")
-df_meta = CSV.read(filename_csv, DataFrame)
+folder_meta = "/Volumes/samsung-T5/HPL/Rheeda/rotors/cc-4d"
 
-##
-
-folder_save = joinpath(folder, "rotors", "trajectories")
+folder_save = joinpath(folder, "rotors", "trajectories-cc-4d")
+mkpath(folder_save)
 
 rows_threads = [[] for i in 1:Threads.nthreads()]
 
-Threads.@threads for row in eachrow(df_meta)
-# for row in eachrow(df_meta)
+Threads.@threads for filename_meta in readdir(folder_meta)
 
-    filename_save = joinpath(
-        folder_save,
-        "M$(row.heart)-G$(row.group)-S$(row.stim)-$(row.component_id).csv"
+    t_id = Threads.threadid()
+
+    tag = split(filename_meta, ".") |> first
+
+    h, g, s = map(
+        x -> parse(Int, x),
+        split(tag, "-")
     )
 
-    # isfile(filename_save) && continue
-    # row.t_end < 7490 && continue
-    # row.group ≠ 4 && continue
-    row.heart ≠ heart && continue
+    h ≠ heart && continue
 
-    i_element_start = point2element[row.v_start] |> first
+    println(t_id, ":", tag)
 
     mesh = load_mesh(
-        row.heart,
-        row.group,
-        row.stim;
+        h,
+        g,
+        s;
         A_vertices,
         A_elements,
         elements,
@@ -89,32 +88,58 @@ Threads.@threads for row in eachrow(df_meta)
         folder_activation
     )
 
-    t_stop = row.t_start + 50.
-    step = -100.
-    df = run_gradient_descent(mesh, i_element_start; step, t_stop)
+    filename_meta_full = joinpath(folder_meta, filename_meta)
+    df_cc = CSV.read(filename_meta_full, DataFrame)
 
     lifetime_min = 1000.
-    t_start, t_end = minimum(df.t), maximum(df.t)
-    lifetime = t_end - t_start
-    lifetime < lifetime_min && continue
+    df_cc = df_cc[df_cc.lifetime .> lifetime_min, :]
 
-    period = find_period(df, mesh)
+    for (i_row, row) in enumerate(eachrow(df_cc))
 
-    t_id = Threads.threadid()
-    row = Dict(
-        :heart => row.heart,
-        :group => row.group,
-        :stim => row.stim,
-        :component_id => row.component_id,
-        :thread_id => t_id,
-        :lifetime => lifetime,
-        :t_start => t_start,
-        :t_end => t_end,
-        :period => period
-    )
-    push!(rows_threads[Threads.threadid()], row)
+        filename_save = joinpath(folder_save, "$(tag)-$(i_row).csv")
+        # isfile(filename_save) && continue
 
-    CSV.write(filename_save, df)
+        # @show row
+
+        i_time = row.i_max
+        v = get_major_index(mesh.arrays, i_time)
+        i = point2element[v] |> first
+    
+        time_start = row.t_max
+    
+        df = nothing
+        try
+            df, metainfo = run_gradient_descent(mesh, i; time_start)
+        catch
+            continue
+        end
+
+        # @show metainfo
+
+        t_start, t_end = minimum(df.t), maximum(df.t)
+        lifetime = t_end - t_start
+        lifetime < lifetime_min && continue
+
+        period = find_period(df, mesh)
+
+        row_thread = Dict(
+            :heart => h,
+            :group => g,
+            :stim => s,
+            :thread_id => t_id,
+            :lifetime => lifetime,
+            :t_start => t_start,
+            :t_end => t_end,
+            :period => period,
+            :i_row => i_row
+        )
+        push!(rows_threads[Threads.threadid()], row_thread)
+        
+        CSV.write(filename_save, df)
+            
+    end
+
+    # break
 
 end
 
@@ -123,6 +148,5 @@ end
 df_params = DataFrame(
     Iterators.flatten(rows_threads)
 )
-
-filename_write = joinpath(folder, "rotors", "M$heart-rotor-params.csv")
+filename_write = joinpath(folder, "rotors", "M$heart-rotor-params-cc-4d.csv")
 CSV.write(filename_write, df_params)
