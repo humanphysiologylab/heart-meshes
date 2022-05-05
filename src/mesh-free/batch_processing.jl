@@ -3,14 +3,16 @@ using DataFrames, CSV
 
 include("../io/read_binary.jl")
 include("../io/load_adj_matrix.jl")
+include("../io/load_arrays.jl")
 
 include("../ActivatedMeshes/ActivatedMeshes.jl")
 include("../ActArrays/ActArrays.jl")
 
 include("run_gradient_descent.jl")
 include("find_period.jl")
-include("load_mesh.jl")
 include("get_labels.jl")
+
+include("bfs.jl")
 
 ##
 
@@ -21,7 +23,7 @@ folders_try = [
 ]
 folder = folders_try[findfirst(isdir.(folders_try))]
 
-heart = 13
+heart = 15
 
 folder_geometry_heart = joinpath(folder, "geometry", "M$heart")
 folder_activation = joinpath(folder, "activation-times")
@@ -77,16 +79,8 @@ Threads.@threads for filename_meta in readdir(folder_meta)
 
     println(t_id, ":", tag)
 
-    mesh = load_mesh(
-        h,
-        g,
-        s;
-        A_vertices,
-        A_elements,
-        elements,
-        points,
-        folder_activation
-    )
+    a = load_arrays(h, g, s; folder_rheeda=folder)
+    mesh = ActivatedMesh(A_vertices, A_elements, elements, a, Dict(:points => points))
 
     filename_meta_full = joinpath(folder_meta, filename_meta)
     df_cc = CSV.read(filename_meta_full, DataFrame)
@@ -102,6 +96,10 @@ Threads.@threads for filename_meta in readdir(folder_meta)
         # @show row
 
         i_time = row.i_max
+
+        bfs_result = bfs(i_time, mesh)[1]
+        i_time = bfs_result.i
+
         v = get_major_index(mesh.arrays, i_time)
         i = point2element[v] |> first
     

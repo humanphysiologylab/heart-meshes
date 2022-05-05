@@ -1,6 +1,52 @@
-dfs = [run_gradient_descent(mesh, step=-100, strategy=:closest) for _ in 1: 10];
+filename_meta = "/Volumes/samsung-T5/HPL/Rheeda/rotors/cc-4d/13-3-37.csv"
+df_cc = CSV.read(filename_meta, DataFrame)
 
-dfs = [run_gradient_descent(mesh, 1, step=-100, strategy=:closest)];
+##
+
+dfs = DataFrame[]
+
+# @showprogress for row in eachrow(df_cc[df_cc.lifetime .> 200, :])
+@showprogress for row in eachrow(df_cc[1:10, :])
+
+    i_time = row.i_max
+
+    bfs_result = bfs(i_time, mesh)[1]
+    i_start = bfs_result.i
+
+    v = get_major_index(a, i_start)
+    i = point2element[v] |> first
+
+    time_start = row.t_max
+    # time_stop = row.t_min + 10.
+
+    df, metainfo = run_gradient_descent(mesh, i, step=-100, strategy=:random; time_start)
+    push!(dfs, df)
+
+    # push!(indices_start, i)
+end
+
+##
+
+for (i, df) in enumerate(dfs)
+
+    filename_save = joinpath(folder_save, "trajectories-4d", "$i.csv")
+    CSV.write(filename_save, df)
+
+end
+
+##
+
+dfs = [run_gradient_descent(mesh, i, step=-100, strategy=:random) for i in indices_start];
+
+
+##
+
+##
+
+# dfs = [run_gradient_descent(mesh, step=-100, strategy=:random) for _ in 1: 10];
+
+# dfs = [run_gradient_descent(mesh, 1, step=-100, strategy=:closest)];
+dfs = [run_gradient_descent(mesh, i, step=-100, strategy=:random)];
 
 df = dfs[end]
 
@@ -13,6 +59,29 @@ trace_bg = create_heart_trace(mesh[:points])
 
 plot([traces..., trace_bg])
 
+##
+
+traces_traj = []
+
+for df in dfs
+
+    cx = :x
+    cy = :y
+    cz = :z
+
+    t = scatter3d(;
+        x = df[:, cx],
+        y = df[:, cy],
+        z = df[:, cz],
+        mode = "lines",
+        # line_color = "grey"
+    )
+
+    push!(traces_traj, t)
+
+end
+
+plot([traces_traj...])
 
 ##
 

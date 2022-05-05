@@ -1,34 +1,38 @@
 using DataStructures
 
 include("../ActArrays/ActArrays.jl")
+include("../ActivatedGraphs/ActivatedGraphs.jl")
+include("../ActivatedMeshes/ActivatedMeshes.jl")
 
 
-function get_component(
-    i::Integer,
-    ag::ActivatedGraph{T},
-    velocity_min=10.,
-    component_id=nothing
-) where T
+function bfs(i::Integer, mesh::ActivatedMesh{T}, velocity_min=10.) where T
+    bfs(i, mesh.arrays, mesh.graph_vertices, velocity_min)
+end
 
+
+function bfs(i::Integer, ag::ActivatedGraph{T}, velocity_min=10.) where T
+    bfs(i, ag.a, ag.graph, velocity_min)
+end
+
+
+function bfs(i::Integer, a::ActArray{T}, graph, velocity_min=10.) where T
     # velocity = 10 um / ms = 1 cm / s
 
     i = T(i)
 
-    !ag[:is_wb][i] && error("no wb here")
-
     q = Queue{T}()
-    ag[:is_visited][i] = true
-    enqueue!(q, i)
 
-    !isnothing(component_id) && (ag[:cc_id][i] = component_id)
+    is_visited = falses(a.len)
+    is_visited[i] = true
+    enqueue!(q, i)
 
     metainfo = Dict{Symbol, Any}()
 
     metainfo[:n] = 1
 
     metainfo[:i_start] = i
-    metainfo[:t_start] = ag[:times][i]
-    metainfo[:v_start] = get_major_index(ag, i)
+    metainfo[:t_start] = a[:times][i]
+    metainfo[:v_start] = get_major_index(a, i)
 
     metainfo[:i_max] = i
     metainfo[:t_max] = metainfo[:t_start]
@@ -38,32 +42,36 @@ function get_component(
     metainfo[:t_min] = metainfo[:t_start]
     metainfo[:v_min] = metainfo[:v_start]
 
+    result = nothing
+
     while !isempty(q)
 
         i = dequeue!(q)
-        v = get_major_index(ag, i)
-        v_time = ag[:times][i]
+        v = get_major_index(a, i)
+        v_time = a[:times][i]
 
-        !isnothing(component_id) && (ag[:cc_id][i] = component_id)
+        if a[:conduction][i] == 1
+            result = (v=v, i=i, time=v_time)
+            break
+        end
 
-        for u in neighbors(ag, v)
+        for u in neighbors(graph, v)
 
-            dist = ag.graph.weights[v, u]
-            u_start, u_stop = ag.a.starts[u], ag.a.stops[u]
+            dist = graph.weights[v, u]
+            u_start, u_stop = a.starts[u], a.stops[u]
 
             for j in u_start: u_stop
 
-                ag[:is_visited][j] && continue
-                !ag[:is_wb][j] && continue
+                is_visited[j] && continue
 
-                u_time = ag[:times][j]
+                u_time = a[:times][j]
                 dt = abs(v_time - u_time)
                 velocity = dist / dt
 
                 velocity < velocity_min && continue
 
                 enqueue!(q, j)
-                ag[:is_visited][j] = true
+                is_visited[j] = true
 
                 metainfo[:n] += 1
 
@@ -83,6 +91,6 @@ function get_component(
     end     
 
     metainfo[:lifetime] = metainfo[:t_max] - metainfo[:t_min]
-    metainfo
+    result, metainfo
 
 end
