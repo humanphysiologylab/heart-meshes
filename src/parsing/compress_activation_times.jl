@@ -4,8 +4,10 @@ include("../misc/create_stops.jl")
 function compress_activation_times(
     vertices::Vector{Int32},
     times::Vector{Float32},
-    n_points::Int32
+    n_points::Integer
 )
+
+    n_points = eltype(vertices)(n_points)
 
     indices_sortperm = sortperm(vertices)
     vertices_sorted = vertices[indices_sortperm]
