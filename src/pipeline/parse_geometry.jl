@@ -125,13 +125,15 @@ function main()
     tetra .+= 1  # indexing from 1
 
     points = read_binary(filename_points, Float32, (3, :))
-    points = permutedims(points, (2, 1))
+    # points = permutedims(points, (2, 1))
 
     A_vertices = create_adj_vertices(tetra)
     I, J, _ = findnz(A_vertices)
-    V = colwise(Euclidean(), points[I, :], points[J, :])
-
-    I_elements, J_elements = create_adj_elements(tetra, A_vertices)
+    V = colwise(
+        Euclidean(),
+        points[:, I],
+        points[:, J]
+    )
 
     folder_output = parsed_args["output"]
 
@@ -151,6 +153,8 @@ function main()
         end
 
     end
+
+    I_elements, J_elements = create_adj_elements(tetra, A_vertices)
 
     folder_elements = joinpath(folder_output, "adj-elements")
     mkpath(folder_elements)
