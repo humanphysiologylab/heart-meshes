@@ -1,10 +1,19 @@
 using ArgParse
 
+using Graphs, SimpleWeightedGraphs
+using DataFrames, CSV
+
+include("../ActArrays/ActArrays.jl")
+include("../ActivatedGraphs/ActivatedGraphs.jl")
+
+include("../cc-4d/get_component.jl")
+include("../cc-4d/get_components.jl")
+
 include("../io/read_binary.jl")
 include("../io/load_adj_matrix.jl")
-include("../conduction/calculate_conduction_map.jl")
 
 include("find_folders_times.jl")
+include("load_arrays.jl")
 
 
 function parse_cl()
@@ -33,6 +42,7 @@ function main()
 
     folder_adj_matrix = parsed_args["adj-vertices"]
     A = load_adj_matrix(folder_adj_matrix, false)
+    g = SimpleWeightedGraph(A)
 
     folder_times = parsed_args["folder-times"]
 
@@ -42,23 +52,20 @@ function main()
 
     Threads.@threads for folder in folders
 
+        filename_save = joinpath(
+            folder,
+            "meta.csv"
+        )
+        !is_rewrite && isfile(filename_save) && continue
+
         tid = Threads.threadid()
         msg = "thread $tid -> $folder"
         @info msg
 
-        filename_starts = joinpath(folder, "starts.int32")
-        filename_times = joinpath(folder, "times.float32")
-
-        filename_conduction = joinpath(folder, "conduction.float32")
-
-        !is_rewrite && isfile(filename_conduction) && continue
-
-        starts = read_binary(filename_starts, Int32)
-        times = read_binary(filename_times, Float32)
-
-        conduction = calculate_conduction_map(A, times, starts)
-
-        write(filename_conduction, conduction)
+        a = load_arrays(folder)
+        ag = ActivatedGraph(g, a)
+        df = get_components(ag)
+        CSV.write(filename_save, df)
 
     end
 

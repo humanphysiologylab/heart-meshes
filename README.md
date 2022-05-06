@@ -41,7 +41,7 @@ julia \
     src/pipeline/parse_times.jl \
     --folder-times "/Volumes/samsung-T5/HPL/Rheeda/tars/G1_M13" \
     --ext ".dat" \
-    --points "/Volumes/samsung-T5/HPL/Rheeda/geometry/M13/points.float32" \
+    --points "./tmp/points.float32" \
     --output "./tmp"
 ```
 
@@ -58,4 +58,15 @@ julia \
     src/pipeline/collect_conduction.jl \
     --folder-times "./tmp/times/" \
     --adj-vertices "./tmp/adj-vertices"
+```
+
+## 4. Connected components
+
+```shell
+julia  \
+    --project=. \
+    --threads auto \
+    src/pipeline/connected_component.jl \
+    --folder-times "./tmp/times/" \
+    --adj-vertices "./tmp/adj-vertices
 ```
