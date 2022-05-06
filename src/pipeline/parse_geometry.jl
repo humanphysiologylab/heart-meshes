@@ -118,13 +118,22 @@ function main()
 
     filename_tetra = parsed_args["tetra"]
     filename_points = parsed_args["points"]
+    folder_output = parsed_args["output"]
 
     tetra = read_binary(filename_tetra, Int32, (4, :))
+
+    filename_tetra_backup = joinpath(folder_output, "tetra.int32")
+    write(filename_tetra_backup, tetra)
+
     tetra = permutedims(tetra, [2, 1])
     minimum(tetra) ≠ 0 && error("minimum element of tetra is not zero")
     tetra .+= 1  # indexing from 1
 
     points = read_binary(filename_points, Float32, (3, :))
+
+    filename_points_backup = joinpath(folder_output, "points.float32")
+    write(filename_points_backup, points)
+
     # points = permutedims(points, (2, 1))
 
     A_vertices = create_adj_vertices(tetra)
@@ -134,8 +143,6 @@ function main()
         points[:, I],
         points[:, J]
     )
-
-    folder_output = parsed_args["output"]
 
     folder_vertices = joinpath(folder_output, "adj-vertices")
     mkpath(folder_vertices)
@@ -171,8 +178,6 @@ function main()
         end
 
     end
-
-    @info "success!"
 
 end
 
