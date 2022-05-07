@@ -22,10 +22,12 @@ tmp
 ├── adj-elements
 │   ├── I.int32
 │   └── J.int32
-└── adj-vertices
-    ├── I.int32
-    ├── J.int32
-    └── V.float32
+├── adj-vertices
+│   ├── I.int32
+│   ├── J.int32
+│   └── V.float32
+├── points.float32
+└── tetra.int32
 ```
 
 ## 2. Parse times
@@ -68,5 +70,16 @@ julia  \
     --threads auto \
     src/pipeline/connected_component.jl \
     --folder-times "./tmp/times/" \
-    --adj-vertices "./tmp/adj-vertices
+    --adj-vertices "./tmp/adj-vertices"
+```
+
+## 5. Collect trajectories
+
+```shell
+julia  \
+    --project=. \
+    --threads auto \
+    src/pipeline/collect_trajectories.jl \
+    --folder-times "./tmp/times/" \
+    --folder-geometry "./tmp"
 ```
