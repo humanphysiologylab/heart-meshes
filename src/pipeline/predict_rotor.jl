@@ -6,7 +6,7 @@ using BSON: @load
 
 
 include("../mesh-free/interpolate_df.jl")
-include("../nn/v2/cnn/predict_proba.jl")
+include("../nn/v2/segment/predict_proba.jl")
 
 
 function parse_cl()
