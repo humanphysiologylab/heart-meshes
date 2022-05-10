@@ -18,8 +18,9 @@ function parse_cl()
         "--adj-vertices"
             help = "folder with I, J and V files. Ex.: path/to/adj-vertices/"
             required = true
-        "--rewrite"
-            default = false
+        "--overwrite"
+            help = "overwrite existing files, ignore them otherwise"
+            action = :store_true
     end
 
     return parse_args(s)
@@ -36,7 +37,7 @@ function main()
 
     folder_times = parsed_args["folder-times"]
 
-    is_rewrite = parsed_args["rewrite"]
+    overwrite = parsed_args["overwrite"]
 
     folders = find_folders_times(folder_times)
 
@@ -51,7 +52,7 @@ function main()
 
         filename_conduction = joinpath(folder, "conduction.float32")
 
-        !is_rewrite && isfile(filename_conduction) && continue
+        !overwrite && isfile(filename_conduction) && continue
 
         starts = read_binary(filename_starts, Int32)
         times = read_binary(filename_times, Float32)

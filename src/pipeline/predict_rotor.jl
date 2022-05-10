@@ -43,6 +43,8 @@ function process_dir(dir, model)
         filename_save = replace(filename, ".csv" => suffix_add)
         CSV.write(filename_save, df)
 
+        @info "✓ $filename_save"
+
     end
 
 end
@@ -56,6 +58,8 @@ parsed_args = parse_cl()
 
 folder_trajectories = parsed_args["folder-trajectories"]
 filename_model = parsed_args["model"]
+
+@info "loading model..."
 @load filename_model model
 
 for (root, dirs, _) in walkdir(folder_trajectories)

@@ -24,8 +24,6 @@ function parse_cl()
         "--folder-geometry"
             help = "folder with tetra, points and adj-*"
             required = true
-        # "--rewrite"
-        #     default = false
     end
 
     return parse_args(s)

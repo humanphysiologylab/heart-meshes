@@ -13,16 +13,18 @@ function parse_cl()
         "--folder-times"
             help = "Ex.: path/to/times/"
             required = true
-        "--ext"
-            help = "file extention of 'times' files. however, 'times' MUST be tsv-files inside."
-            default = ".tsv"
         "--points"
             help = "filename. Ex.: points.float32"
             required = true
+        "--ext"
+            help = "file extention of 'times' files. however, 'times' MUST be tsv-files inside."
+            default = ".tsv"
         "--output"
             help = "folder to save the results"
-            arg_type = String
             default = "./"
+        "--overwrite"
+            help = "overwrite existing files, ignore them otherwise"
+            action = :store_true
     end
 
     return parse_args(s)
@@ -33,16 +35,20 @@ end
 function parse_times_worker(
     filename_full,
     folder_save_current,
-    n_points
+    n_points;
+    overwrite=false
 )
+
+    filename_starts = joinpath(folder_save_current, "starts.int32")
+    filename_times = joinpath(folder_save_current, "times.float32")
+
+    all_found = isfile.([filename_starts, filename_times]) |> all
+    !overwrite && all_found && return
 
     vs, times = read_dat(filename_full)
     starts, times, n_points_found = compress_activation_times(vs, times, n_points)
 
     mkpath(folder_save_current)
-    
-    filename_starts = joinpath(folder_save_current, "starts.int32")
-    filename_times = joinpath(folder_save_current, "times.float32")
 
     write(filename_starts, starts)
     write(filename_times, times)
@@ -87,6 +93,7 @@ function main()
     )
 
     folder_times = parsed_args["folder-times"]
+    overwrite = parsed_args["overwrite"]
 
     filenames_full = find_filenames(folder_times, ext)
 
@@ -97,14 +104,14 @@ function main()
             folder_times
         )
 
+        dir = dirname(filename_rel)
+        folder_save_current = joinpath(folder_save, dir)
+
         tid = Threads.threadid()
         msg = "thread $tid -> $filename_rel"
         @info msg
 
-        dir = dirname(filename_rel)
-        folder_save_current = joinpath(folder_save, dir)
-
-        parse_times_worker(filename_full, folder_save_current, n_points)
+        parse_times_worker(filename_full, folder_save_current, n_points; overwrite)
         
     end
 
