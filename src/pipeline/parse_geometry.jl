@@ -5,7 +5,7 @@ using Combinatorics
 using ProgressMeter
 
 include("../io/read_binary.jl")
-
+include("create_point2element.jl")
 
 function parse_cl()
 
@@ -53,13 +53,7 @@ function create_adj_elements(tetra::Matrix{T}, A_vertices) where {T}
     n_tetra = size(tetra, 1)
     tetra_size = size(tetra, 2)
 
-    point2tetras = [T[] for _ in 1:n_points]
-
-    @showprogress for (i_tetra, t) in enumerate(eachrow(tetra))
-        for i_point in t
-            push!(point2tetras[i_point], i_tetra)
-        end
-    end
+    point2tetras = create_point2element(tetra, n_points)
 
     buff_size = n_tetra * tetra_size * (tetra_size - 1) * 2
     # facets x [points in one facet] x symmetry
@@ -71,7 +65,7 @@ function create_adj_elements(tetra::Matrix{T}, A_vertices) where {T}
 
     rows = rowvals(A_vertices)
 
-    @showprogress for i_point ∈ 1: size(A_vertices, 1)
+    @showprogress "creating adj-elements/" for i_point ∈ 1: size(A_vertices, 1)
 
         pairs = combinations(
             rows[nzrange(A_vertices, i_point)],
@@ -123,6 +117,8 @@ function main()
     tetra = read_binary(filename_tetra, Int32, (4, :))
 
     filename_tetra_backup = joinpath(folder_output, "tetra.int32")
+
+    mkpath(folder_output)
     write(filename_tetra_backup, tetra)
 
     tetra = permutedims(tetra, [2, 1])

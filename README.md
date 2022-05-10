@@ -3,6 +3,8 @@
 - `points.float32`
 - folder of `times.tsv`
 
+Ask Andrey (pikunov@phystech.edu) for `data-sample`.
+
 # Steps
 
 For every step there is a short help. For example:
@@ -21,8 +23,8 @@ Needs to run only once for every heart geometry.
 julia \
     --project=. \
     src/pipeline/parse_geometry.jl \
-    --tetra "path/to/tetra.int32" \
-    --points "path/to/points.float32" \
+    --tetra "data-sample/M13_IRC_tetra.int32" \
+    --points "data-sample/M13_IRC_3Dpoints.float32" \
     --output "./output"
 ```
 
@@ -69,7 +71,7 @@ julia \
     --project=. \
     --threads auto \
     src/pipeline/parse_times.jl \
-    --folder-times "path/to/folders/with/times/" \
+    --folder-times "data-sample/activation-times/" \
     --ext ".dat" \
     --points "./output/points.float32" \
     --output "./output"
@@ -151,4 +153,6 @@ julia \
     --model "./flux-models/model-v2-latest.bson"
 ```
 
-Creates `csv`-files inside `trajectories/` with columns: `t, x, y, z, proba`. The latter is the probability of rotor. `t` is 10ms discretized time.
+Creates `csv`-files inside `trajectories/` with columns: `t, x, y, z, proba`.
+The latter is the probability of rotor.
+`t` is 10ms discretized time.
