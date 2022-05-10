@@ -83,3 +83,13 @@ julia  \
     --folder-times "./tmp/times/" \
     --folder-geometry "./tmp"
 ```
+
+## 6. Predict rotors
+
+```shell
+julia \
+    --project=. \
+    src/pipeline/predict_rotor.jl \
+    --folder-trajectories "./tmp/times" \
+    --model "/Users/andrey/Work/HPL/projects/rheeda/heart-meshes/flux-models/model-v2-latest.bson"
+```
