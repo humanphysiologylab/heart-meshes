@@ -12,7 +12,7 @@ include("predict_proba.jl")
 
 x, y = first(train_loader)
 
-n_stack = 5
+n_stack = 3
 window_size = 128
 conv_filter = (7,)
 inner_channels = 16
@@ -50,7 +50,7 @@ opt = ADAM()
 ##
 
 best_score = 0
-filename_model_save = "/Users/andrey/Work/HPL/projects/rheeda/heart-meshes/flux-models/model-v2-latest.bson"
+filename_model_save = "/Users/andrey/Work/HPL/projects/rheeda/heart-meshes/flux-models/model-v2-$n_stack-latest.bson"
 
 ##
 

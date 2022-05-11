@@ -14,7 +14,7 @@ function create_model(
 
     for i in 1: n_stack
 
-        in = (i == 1) ? 3 : inner_channels
+        in = (i == 1) ? input_channels : inner_channels
         out = inner_channels
 
         stack = Chain(
