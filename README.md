@@ -7,22 +7,35 @@ Ask Andrey (pikunov@phystech.edu) for `data-sample`.
 
 # Steps
 
-For every step there is a short help. For example:
+## 0. Instantiate 
+
+Install all the dependencies.
+
 ```shell
+cd src/pipeline  
+# and stay here for all next steps
+
 julia \
-    --project=. \
-    src/pipeline/parse_geometry.jl \
-    --help  # <- this flag helps
+    --project=./env \
+    instantiate.jl
 ```
 
 ## 1. Parse geometry
 *< 10 minutes*
 
+From now on, for every step there is a short help. For example:
+```shell
+julia \
+    --project=./env \
+    parse_geometry.jl \
+    --help  # <- this flag helps
+```
+
 Needs to run only once for every heart geometry.
 ```shell
 julia \
-    --project=. \
-    src/pipeline/parse_geometry.jl \
+    --project=./env \
+    parse_geometry.jl \
     --tetra "data-sample/M13_IRC_tetra.int32" \
     --points "data-sample/M13_IRC_3Dpoints.float32" \
     --output "./output"
@@ -68,9 +81,9 @@ The is `--overwrite` flag for obvious purpose. Next commands have this flag too.
 
 ```shell
 julia \
-    --project=. \
+    --project=./env \
     --threads auto \
-    src/pipeline/parse_times.jl \
+    parse_times.jl \
     --folder-times "data-sample/activation-times/" \
     --ext ".dat" \
     --points "./output/points.float32" \
@@ -103,9 +116,9 @@ All next commands will save results into this newly created `times/` folder.
 
 ```shell
 julia \
-    --project=. \
+    --project=./env \
     --threads auto \
-    src/pipeline/collect_conduction.jl \
+    collect_conduction.jl \
     --folder-times "./output/times/" \
     --adj-vertices "./output/adj-vertices"
 ```
@@ -116,10 +129,10 @@ Creates `conduction.float32`.
 ## 4. Connected components
 
 ```shell
-julia  \
-    --project=. \
+julia \
+    --project=./env \
     --threads auto \
-    src/pipeline/connected_component.jl \
+    connected_component.jl \
     --folder-times "./output/times/" \
     --adj-vertices "./output/adj-vertices"
 ```
@@ -133,10 +146,10 @@ This is because of some steps of the algorithm's with stochasticity inside.
 In rare cases some rotors can be ommited.
 
 ```shell
-julia  \
-    --project=. \
+julia \
+    --project=./env \
     --threads auto \
-    src/pipeline/collect_trajectories.jl \
+    collect_trajectories.jl \
     --folder-times "./output/times/" \
     --folder-geometry "./output"
 ```
@@ -147,10 +160,10 @@ Creates `trajectories/` folders and populates them if any rotors found.
 
 ```shell
 julia \
-    --project=. \
-    src/pipeline/predict_rotor.jl \
+    --project=./env \
+    predict_rotor.jl \
     --folder-trajectories "./output/times" \
-    --model "./flux-models/model-v2-latest.bson"
+    --model "../../flux-models/model-v2-latest.bson"
 ```
 
 Creates `csv`-files inside `trajectories/` with columns: `t, x, y, z, proba`.
