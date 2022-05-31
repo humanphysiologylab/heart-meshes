@@ -74,7 +74,7 @@ function get_component(
                 elseif u_time < metainfo[:t_min]
                     metainfo[:t_min] = u_time
                     metainfo[:i_min] = j
-                    metainfo[:v_max] = u
+                    metainfo[:v_min] = u
                 end
             end
 
