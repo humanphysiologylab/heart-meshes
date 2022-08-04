@@ -24,6 +24,9 @@ function parse_cl()
         "--folder-geometry"
             help = "folder with tetra, points and adj-*"
             required = true
+        "--overwrite"
+            help = "overwrite existing files, ignore them otherwise"
+            action = :store_true
     end
 
     return parse_args(s)
@@ -38,6 +41,7 @@ function main()
 
     folder_geometry = parsed_args["folder-geometry"]
     folder_times = parsed_args["folder-times"]
+    overwrite = parsed_args["overwrite"]
 
     A_vertices, A_tetra, tetra, points = load_geometry(folder_geometry)
     point2element = create_point2element(tetra, size(points, 1))
@@ -52,6 +56,9 @@ function main()
             folder,
             "trajectories"
         )
+
+        !overwrite && isdir(filename_trajectories) && continue
+
         rm(filename_trajectories, force=true, recursive=true)
         mkpath(filename_trajectories)
 
@@ -63,14 +70,20 @@ function main()
         @info msg
 
         filename_meta = joinpath(folder, "meta.csv")
+        if !isfile(filename_meta)
+            @warn "no such file: $filename_meta\ncontinue..."
+            continue
+        end
+
         df_meta = CSV.read(filename_meta, DataFrame)
 
-        lifetime_min = 1000.
+        lifetime_min = 200.
         df_meta = df_meta[df_meta.lifetime .> lifetime_min, :]
 
         for (i_row, row) in enumerate(eachrow(df_meta))
 
-            filename_save = joinpath(filename_trajectories, "$(i_row).csv")
+            component_id = row[:component_id]
+            filename_save = joinpath(filename_trajectories, "$component_id.csv")
             # isfile(filename_save) && continue
 
             # @show row

@@ -18,6 +18,7 @@ function get_component(
 
     q = Queue{T}()
     ag[:is_visited][i] = true
+    ag[:parent][i] = -1  # start
     enqueue!(q, i)
 
     !isnothing(component_id) && (ag[:cc_id][i] = component_id)
@@ -64,6 +65,7 @@ function get_component(
 
                 enqueue!(q, j)
                 ag[:is_visited][j] = true
+                ag[:parent][j] = i
 
                 metainfo[:n] += 1
 

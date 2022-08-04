@@ -82,7 +82,7 @@ function bfs(i::Integer, a::ActArray{T}, graph, velocity_min=10.) where T
                 elseif u_time < metainfo[:t_min]
                     metainfo[:t_min] = u_time
                     metainfo[:i_min] = j
-                    metainfo[:v_max] = u
+                    metainfo[:v_min] = u
                 end
             end
 

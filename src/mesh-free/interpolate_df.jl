@@ -2,7 +2,7 @@ using DataFrames, CSV
 using DataInterpolations
 
 
-function interpolate_df(df, dt=10)
+function interpolate_df(df, dt=10; columns=[:x, :y, :z])
 
     df = sort(df, :t)
 
@@ -10,7 +10,7 @@ function interpolate_df(df, dt=10)
 
     data = Dict(:t => t)
 
-    for c in (:x, :y, :z)
+    for c in columns
         interp = ConstantInterpolation(df[!, c], df.t)
         data[c] = interp.(t)
     end

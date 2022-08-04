@@ -13,7 +13,7 @@ function find_period(df::DataFrame, a::ActArray, elements::Matrix)
         append!(periods, diff(times_masked))
     end
 
-    period = median(periods)
+    period = (length(periods) > 0) ? median(periods) : NaN
 
 end
 

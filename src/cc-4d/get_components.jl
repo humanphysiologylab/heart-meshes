@@ -10,13 +10,16 @@ function get_components(ag; show_progress=false)
     ag[:is_visited] = falses(ag.a.len)
     ag[:is_wb] = ag[:conduction] .< 1
     ag[:cc_id] = zeros(Int32, ag.a.len)
+    ag[:parent] = zeros(Int32, ag.a.len)
     # ag[:is_wb] = @. (ag[:conduction] < 1) | isnan(ag[:conduction])
 
     prog = ProgressUnknown(;enabled=show_progress)
 
-    component_id = 1
+    component_id = 0
 
     while true
+
+        component_id += 1
 
         available = @. !ag[:is_visited] & ag[:is_wb]
         i = findfirst(available)
@@ -33,7 +36,6 @@ function get_components(ag; show_progress=false)
         row[:component_id] = component_id
 
         push!(rows, row)
-        component_id += 1
 
         percent = sum(ag[:is_visited]) / sum(ag[:is_wb]) * 100
         percent = round(percent)

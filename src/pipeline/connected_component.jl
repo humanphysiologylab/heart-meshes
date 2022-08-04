@@ -57,7 +57,7 @@ function main()
             folder,
             "meta.csv"
         )
-        overwrite && isfile(filename_save) && continue
+        !overwrite && isfile(filename_save) && continue
 
         tid = Threads.threadid()
         msg = "thread $tid -> $folder"
@@ -65,8 +65,12 @@ function main()
 
         a = load_arrays(folder)
         ag = ActivatedGraph(g, a)
-        df = get_components(ag)
-        CSV.write(filename_save, df)
+        try
+            df = get_components(ag)
+            CSV.write(filename_save, df)
+        catch
+            @warn "FAILED " * msg
+        end
 
     end
 

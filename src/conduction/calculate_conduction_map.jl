@@ -8,6 +8,7 @@ function calculate_conduction_map(
     times::Vector{F},
     starts::Vector{I};
     cv_min::AbstractFloat = 10.0,  # um/s : 10 um/ms = 10 mm/s = 1 cm/s
+    t_margin::AbstractFloat = 100.,  # ms
     output_prealloc::Union{Vector{F},Nothing} = nothing,
 )::Union{Vector{F},Nothing} where {F<:AbstractFloat} where {I<:Integer}
 
@@ -25,6 +26,7 @@ function calculate_conduction_map(
     end
 
     ∇t_max = 1 / cv_min
+    t_max = maximum(times) - t_margin
 
     @fastmath @inbounds begin
 
@@ -37,9 +39,9 @@ function calculate_conduction_map(
             indices_neighbours = @view rows[nz_i]
             distanses_neighbours = @view vals[nz_i]
 
-            for (index_time_i, time_i) in enumerate(times_i[1:end-1])
-                # `[1: end - 1]` is because of the last beat leading to the wavebreak
-                # all over the wavefront, so I will ommit the last beat
+            for (index_time_i, time_i) in enumerate(times_i)
+
+                time_i > t_max && continue
 
                 conduction_successes = 0
 
