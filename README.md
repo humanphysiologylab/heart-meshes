@@ -158,14 +158,4 @@ Creates `trajectories/` folders and populates them if any rotors found.
 
 ## 6. Predict rotors
 
-```shell
-julia \
-    --project=./env \
-    predict_rotor.jl \
-    --folder-trajectories "./output/times" \
-    --model "../../flux-models/model-v2-latest.bson"
-```
-
-Creates `csv`-files inside `trajectories/` with columns: `t, x, y, z, proba`.
-The latter is the probability of rotor.
-`t` is 10ms discretized time.
+This final step is in [different repository](https://github.com/humanphysiologylab/nn-rotor/tree/master) (specifically, [this notebook](https://github.com/humanphysiologylab/nn-rotor/blob/master/notebooks/017-Predict-pipeline.ipynb)).
