@@ -1,22 +1,32 @@
+using StatsBase
 using SparseArrays
 
 
 function calculate_FE_probas(
-    adjacency_matrix::SparseMatrixCSC{Bool,T},
-    mask_fibrosis,
-    fibrosis_only = false,
-) where {T<:Integer}
-    mask = fibrosis_only ? mask_fibrosis : (:)
-    n_total = sum(adjacency_matrix[mask, :], dims = 2)
-    n_fibrosis = sum(adjacency_matrix[mask, mask_fibrosis], dims = 2)
+    adjacency_matrix::SparseMatrixCSC,
+    mask_fibrosis
+)
+    n_total = sum(adjacency_matrix[:, :] .> 0, dims = 2)
+    n_fibrosis = sum(adjacency_matrix[:, mask_fibrosis] .> 0, dims = 2)
     probas = n_fibrosis ./ n_total
+    probas[iszero.(n_total)] .= 0  # no neighbors - no proba
+    @assert !any(isnan.(probas)) 
     probas[mask_fibrosis] = 1 .- probas[mask_fibrosis]
-    return probas[:, 1]
+    probas = probas[:]
+    return probas
 end
 
 
-function calculate_entropy(probas)
-    indices_zero = iszero.(probas)
-    probas_nonzero = @view probas[.!indices_zero]
-    sum(map(p -> -p * log(p), probas_nonzero))
+function calculate_entropy(probas, agg=mean)
+    f(p) = iszero(p) ? 0 : -p * log(p)
+    agg(map(f, probas))
+end
+
+
+function calculate_entropy(
+    adjacency_matrix::SparseMatrixCSC,
+    mask_fibrosis
+)
+    probas = calculate_FE_probas(adjacency_matrix, mask_fibrosis)
+    calculate_entropy(probas)
 end

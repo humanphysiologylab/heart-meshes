@@ -7,6 +7,7 @@ using NearestNeighbors
 include("../misc/graph.jl")
 include("../io/read_binary.jl")
 include("../io/load_adj_matrix.jl")
+include("./entropy.jl")
 
 ##
 
@@ -43,8 +44,8 @@ df_meta = CSV.read(filename_meta, DataFrame)
 
 ##
 
-filename_probas = "/Users/andrey/Work/HPL/projects/rheeda/multiscale-personalized-models/data/averaging/averaging.csv"
-df_probas = CSV.read(filename_probas, DataFrame)
+# filename_probas = "/Users/andrey/Work/HPL/projects/rheeda/multiscale-personalized-models/data/averaging/averaging.csv"
+# df_probas = CSV.read(filename_probas, DataFrame)
 
 ##
 
@@ -62,14 +63,18 @@ end
 
 ##
 
-ρs = 10 .^ (1: 0.1: 5)
+# ρs = 10 .^ (1: 0.1: 5)
+ρs = [1e5]
+threshold = 5000  # um
 
 # rows = []
 rows_threads = [[] for i in 1:Threads.nthreads()]
 
+USE_QUANTILES = false
 n_quantiles = 9
 
-Threads.@threads for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
+# Threads.@threads for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
+for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
 
     t_id = Threads.threadid()
 
@@ -96,10 +101,8 @@ Threads.@threads for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
     dists = ds.dists
 
 
-
-    threshold = 5000
-    mask_space = ds.dists .< threshold
-    indices_out = findall(.!mask_space)
+    mask_rotor_environment = ds.dists .< threshold
+    indices_out = findall(.!mask_rotor_environment)
 
     g_mask = g[indices_out]
 
@@ -108,13 +111,13 @@ Threads.@threads for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
 
     for (i, c) in enumerate(cc)
         length(c) == length_max && continue
-        mask_space[indices_out[c]] .= true
+        mask_rotor_environment[indices_out[c]] .= true
     end
 
 
 
-    heart_id = heart == 13 ? 1 : 2
-    # heart_id = heart
+    # heart_id = heart == 13 ? 1 : 2
+    heart_id = heart
 
     mask_probas = df_probas.heart .== heart_id
     mask_probas .&= df_probas.group .== group
@@ -130,12 +133,16 @@ Threads.@threads for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
     for ρ in ρs
 
         mask_dist = dists .< ρ
-        mask_dist .&= mask_space
+        mask_dist .&= mask_rotor_environment
 
         fibrosis_intersection = mask_fibrosis[mask_dist] 
 
         fibrosis_mean = fibrosis_intersection |> mean
-        qs = nquantile(fibrosis_intersection, n_quantiles)
+
+        fibrosis_entropy = calculate_entropy(
+            A[mask_dist, mask_dist],
+            mask_fibrosis[mask_dist]
+        )
 
         row = Dict(
             "heart" => heart,
@@ -143,27 +150,34 @@ Threads.@threads for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
             "stim" => stim,
             "i" => i,
             "ρ" => ρ,
-            "fibrosis_mean" => fibrosis_mean
+            "fibrosis_mean" => fibrosis_mean,
+            "fibrosis_entropy" => fibrosis_entropy
         )
 
-        for (iq, q) in enumerate(qs)
-            c = "fibrosis_q$(iq)_$(n_quantiles + 1)"
-            if iq == 1
-                c = "fibrosis_min"
-            elseif iq == n_quantiles + 1
-                c = "fibrosis_max"
+        if USE_QUANTILES
+
+            qs = nquantile(fibrosis_intersection, n_quantiles)
+
+            for (iq, q) in enumerate(qs)
+                c = "fibrosis_q$(iq)_$(n_quantiles + 1)"
+                if iq == 1
+                    c = "fibrosis_min"
+                elseif iq == n_quantiles + 1
+                    c = "fibrosis_max"
+                end
+                row[c] = q
             end
-            row[c] = q
+
         end
 
         #
-        mask_intersect = mask_dist[df_group.i]
-        df_intersect = df_group[mask_intersect, :]
+        # mask_intersect = mask_dist[df_group.i]
+        # df_intersect = df_group[mask_intersect, :]
 
         # @show size(mask_dist)
         # @show df_po
 
-        # df_intersect = df_group[mask_dist, :]
+        df_intersect = df_group[mask_dist, :]
 
         #
         indices_dist = findall(mask_dist)
@@ -172,19 +186,23 @@ Threads.@threads for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
         for column_proba in columns_proba
             proba = df_intersect[: , column_proba]
 
-            proba_mean = mean(proba)
-            row["$(column_proba)_mean"] = proba_mean
+            row["$(column_proba)_mean"] = mean(proba)
+            row["$(column_proba)_sum"] = sum(proba)
 
-            qs = nquantile(proba, n_quantiles)
+            if USE_QUANTILES
 
-            for (iq, q) in enumerate(qs)
-                c = "$(column_proba)_q$(iq)_$(n_quantiles + 1)"
-                if iq == 1
-                    c = "$(column_proba)_min"
-                elseif iq == n_quantiles + 1
-                    c = "$(column_proba)_max"
+                qs = nquantile(proba, n_quantiles)
+
+                for (iq, q) in enumerate(qs)
+                    c = "$(column_proba)_q$(iq)_$(n_quantiles + 1)"
+                    if iq == 1
+                        c = "$(column_proba)_min"
+                    elseif iq == n_quantiles + 1
+                        c = "$(column_proba)_max"
+                    end
+                    row[c] = q
                 end
-                row[c] = q
+
             end
 
         end
@@ -227,8 +245,12 @@ df = df[!, columns_sorted]
 
 ##
 
-filename_save = "/Volumes/samsung-T5/HPL/Rheeda/rotors/unet-averaging-$heart-v4.csv"
+# filename_save = "/Volumes/samsung-T5/HPL/Rheeda/rotors/unet-averaging-$heart-v3.csv"
+filename_save = "/Volumes/samsung-T5/HPL/Rheeda/rotors/unet-averaging-$heart-v3-short.csv"
 CSV.write(filename_save, df)
+
+##
+
 
 ##
 
