@@ -9,21 +9,65 @@ include("../io/read_binary.jl")
 include("../io/load_adj_matrix.jl")
 include("./entropy.jl")
 
+include("../ActArrays/ActArrays.jl")
+
 ##
 
-folder_rheeda = "/Volumes/samsung-T5/HPL/Rheeda/"
+function mean_w(x, w)
+    sum(x .* w) / sum(w)
+end
+
+##
 
 heart = 15
 
-folder_adj_matrix = joinpath(folder_rheeda, "geometry", "M$heart", "adj-vertices")
+folder_rheeda = "/Volumes/samsung-T5/HPL/Rheeda/"
+folder_geometry = joinpath(folder_rheeda, "geometry", "M$heart")
+
+
+folder_adj_matrix = joinpath(folder_geometry, "adj-vertices")
 A = load_adj_matrix(folder_adj_matrix, false)
 g = SimpleWeightedGraph(A)
 
 ##
 
-filename_points = joinpath(folder_rheeda, "geometry", "M$heart", "points.float32")
+filename_points = joinpath(folder_geometry, "points.float32")
 points = read_binary(filename_points, Float32, (3, :))
 # points = permutedims(points, (2, 1))
+
+##
+
+folder_v2e = joinpath(folder_geometry, "v2e")
+filename_v2e_starts = joinpath(folder_v2e, "starts.int32")
+filename_v2e_indices_elements = joinpath(folder_v2e, "indices_elements.int32")
+
+starts = read_binary(filename_v2e_starts, Int32)
+indices_elements = read_binary(filename_v2e_indices_elements, Int32)
+
+idx_mapper = ActArray(starts, Dict(:el => indices_elements))
+
+function get_el(idx_mapper, i)
+    get_subarray(idx_mapper, i, :el)
+end
+
+##
+
+filename_elements = joinpath(folder_geometry, "elements.int32")
+elements = read_binary(filename_elements, Int32, (4, :))
+elements .+= 1
+elements = permutedims(elements, (2, 1))
+
+##
+
+filename_region = joinpath(folder_rheeda, "M$heart", "M$(heart)_IRC_region.int32")
+region = read_binary(filename_region, Int32)
+fibrosis_elements = region .∈ Ref((32, 128))
+fibrosis_elements = collect(fibrosis_elements)
+
+##
+
+filename_volume = joinpath(folder_geometry, "element_volume.float32")
+volume = read_binary(filename_volume, Float32)
 
 ##
 
@@ -135,8 +179,16 @@ for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
         mask_dist = dists .< ρ
         mask_dist .&= mask_rotor_environment
 
-        fibrosis_intersection = mask_fibrosis[mask_dist] 
+        indices_dist = findall(mask_dist)
+        indices_els = [get_el(idx_mapper, i) for i in indices_dist] |> Iterators.flatten |> unique
+        fibrosis_mean_el = mean_w(
+            fibrosis_elements[indices_els],
+            volume[indices_els]
+        )
 
+        vertices = elements[indices_els, :]
+
+        fibrosis_intersection = mask_fibrosis[mask_dist] 
         fibrosis_mean = fibrosis_intersection |> mean
 
         fibrosis_entropy = calculate_entropy(
@@ -151,7 +203,8 @@ for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
             "i" => i,
             "ρ" => ρ,
             "fibrosis_mean" => fibrosis_mean,
-            "fibrosis_entropy" => fibrosis_entropy
+            "fibrosis_entropy" => fibrosis_entropy,
+            "fibrosis_mean_el" => fibrosis_mean_el
         )
 
         if USE_QUANTILES
@@ -180,14 +233,19 @@ for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
         df_intersect = df_group[mask_dist, :]
 
         #
-        indices_dist = findall(mask_dist)
-        indices_dist_intersect = intersect(indices_dist, df_group.i)
+        # indices_dist_intersect = intersect(indices_dist, df_group.i)
 
         for column_proba in columns_proba
             proba = df_intersect[: , column_proba]
 
             row["$(column_proba)_mean"] = mean(proba)
             row["$(column_proba)_sum"] = sum(proba)
+
+            proba_full = df_group[:, column_proba]
+            proba_el = mean(proba_full[vertices], dims=2)[:]
+
+            proba_el_mean = mean_w(proba_el, volume[indices_els])
+            row["$(column_proba)_mean_el"] = proba_el_mean
 
             if USE_QUANTILES
 
@@ -246,7 +304,7 @@ df = df[!, columns_sorted]
 ##
 
 # filename_save = "/Volumes/samsung-T5/HPL/Rheeda/rotors/unet-averaging-$heart-v3.csv"
-filename_save = "/Volumes/samsung-T5/HPL/Rheeda/rotors/unet-averaging-$heart-v3-short.csv"
+filename_save = "/Volumes/samsung-T5/HPL/Rheeda/rotors/unet-averaging-$heart-v3-el.csv"
 CSV.write(filename_save, df)
 
 ##
@@ -256,7 +314,6 @@ CSV.write(filename_save, df)
 
 group = 3
 stim = 13
-
 
 filename_traj = joinpath(
     "/Volumes/samsung-T5/HPL/Rheeda/rotors/unet/",
@@ -293,7 +350,7 @@ filename_save = joinpath(
     "/Users/andrey/Work/HPL/projects/rheeda/multiscale-personalized-models/data/tmp",
     "mask.int"
 )
-write(filename_save, collect(mask_space)) 
+# write(filename_save, collect(mask_space)) 
 
 
 ##
