@@ -12,7 +12,7 @@ include("../ActArrays/ActArrays.jl")
 
 ##
 
-heart = 15
+heart = 13
 
 folder_rheeda = "/Volumes/samsung-T5/HPL/Rheeda/"
 folder_geometry = joinpath(folder_rheeda, "geometry", "M$heart")
@@ -66,6 +66,9 @@ nn(tree, points[:, :])
 # ρs = 10 .^ (1: 0.1: 5)
 ρ = 1e5
 threshold = 5000  # um
+threshold = 2500  # Trayanova, um
+
+ONLY_TORUS = true
 
 masks = Dict()
 for group in 1:4
@@ -77,14 +80,17 @@ for group in 1:4
     )
 end
 
-# Threads.@threads for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
-for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
+Threads.@threads for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
+# for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
 
     t_id = Threads.threadid()
     
     group = row_meta.group
     stim = row_meta.stim
     i = row_meta.i
+
+    # heart_id = heart == 13 ? 1 : 2
+    heart_id = heart
 
     @show t_id, heart, group, stim, i
 
@@ -104,23 +110,25 @@ for row_meta in eachrow(df_meta[df_meta.heart .== heart, :])
     ds = dijkstra_shortest_paths(g, nn_indices)
     dists = ds.dists
 
+    mask_dist = dists .< ρ
     mask_rotor_environment = ds.dists .< threshold
-    indices_out = findall(.!mask_rotor_environment)
 
-    g_mask = g[indices_out]
+    if !ONLY_TORUS
 
-    cc = connected_components(g_mask)
-    length_max = maximum(length.(cc))
+        indices_out = findall(.!mask_rotor_environment)
 
-    for (i, c) in enumerate(cc)
-        length(c) == length_max && continue
-        mask_rotor_environment[indices_out[c]] .= true
+        g_mask = g[indices_out]
+
+        cc = connected_components(g_mask)
+        length_max = maximum(length.(cc))
+
+        for (i, c) in enumerate(cc)
+            length(c) == length_max && continue
+            mask_rotor_environment[indices_out[c]] .= true
+        end
+
     end
 
-    # heart_id = heart == 13 ? 1 : 2
-    heart_id = heart
-
-    mask_dist = dists .< ρ
     mask_dist .&= mask_rotor_environment
 
     masks[group][:vertices] .|= mask_dist
@@ -136,11 +144,13 @@ end
 
 folder_save = "/Volumes/samsung-T5/HPL/Rheeda/mask_rotors"
 
+suffix = "-torus"
+
 for group in 1: 4
 
     filename_save = joinpath(
         folder_save,
-        "$(heart)-$(group)-vertices.bool"
+        "$(heart)-$(group)-vertices-$(suffix).bool"
     )
 
     open(filename_save, "w") do f
@@ -150,11 +160,11 @@ for group in 1: 4
 
     filename_save = joinpath(
         folder_save,
-        "$(heart)-$(group)-elements.bool"
+        "$(heart)-$(group)-elements-$(suffix).bool"
     )
 
     open(filename_save, "w") do f
-        x = masks[group][:elements]
+        x = collect(masks[group][:elements])
         write(f, x)
     end
 

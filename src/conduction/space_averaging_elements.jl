@@ -11,6 +11,8 @@ include("../io/load_adj_matrix.jl")
 
 include("../ActArrays/ActArrays.jl")
 
+include("../fibrosis/entropy.jl")
+
 ##
 
 function mean_w(x, w)
@@ -37,7 +39,7 @@ n_simulations = 40
 
 ##
 
-heart = 15
+heart = 13
 
 folder_rheeda = "/Volumes/samsung-T5/HPL/Rheeda/"
 folder_geometry = joinpath(folder_rheeda, "geometry", "M$heart")
@@ -45,6 +47,9 @@ folder_geometry = joinpath(folder_rheeda, "geometry", "M$heart")
 folder_adj_matrix = joinpath(folder_geometry, "adj-vertices")
 A = load_adj_matrix(folder_adj_matrix, false)
 g = SimpleWeightedGraph(A)
+
+folder_adj_matrix_el = joinpath(folder_geometry, "adj-elements")
+A_elements = load_adj_matrix(folder_adj_matrix_el)
 
 ##
 
@@ -116,10 +121,40 @@ fd = read_binary(filename_mask_fibrosis, Bool)
 
 ##
 
+folder_mask_rotors = "/Volumes/samsung-T5/HPL/Rheeda/mask_rotors"
+
+masks_rotors = Dict()
+
+for group in 1: 4
+
+    masks_rotors[group] = Dict()
+
+    filename = joinpath(
+        folder_mask_rotors,
+        "$(heart)-$(group)-vertices--torus.bool"
+    )
+    mask = read_binary(filename, Bool)
+    masks_rotors[group][:vertices] = mask
+
+    filename = joinpath(
+        folder_mask_rotors,
+        "$(heart)-$(group)-elements--torus.bool"
+    )
+    mask = read_binary(filename, Bool)
+    masks_rotors[group][:elements] = mask
+
+end
+
+
+
+##
+
 n_points = size(A, 1)
 n_samples = 10_000
 samples = randperm(MersenneTwister(1234), n_points)[1:n_samples]
-r = 1e4
+
+ρs = (1e3, 1e4)
+# ρ = 1e4
 
 groups = 1: 4
 n_groups = length(groups)
@@ -127,7 +162,7 @@ n_groups = length(groups)
 rows_threads = [[] for i in 1:Threads.nthreads()]
 
 # @showprogress for (i, vertex_id) ∈ collect(enumerate(samples))
-Threads.@threads for (i, vertex_id) ∈ collect(enumerate(samples))
+Threads.@threads for vertex_id ∈ samples
 
     t_id = Threads.threadid()
 
@@ -136,58 +171,77 @@ Threads.@threads for (i, vertex_id) ∈ collect(enumerate(samples))
         n_rows % 100 == 0 && print(".")
     end
 
-    neighbours = neighborhood(g, vertex_id, r)
-    n_points_area = length(neighbours)
 
-    indices_els = [get_el(idx_mapper, i) for i in neighbours] |> Iterators.flatten |> unique
-    fd = mean_w(
-        fibrosis_elements[indices_els],
-        volume[indices_els]
-    )
-    indices_vertices = elements[indices_els, :]
+    for ρ in ρs
 
-    for group in groups
+        neighbours = neighborhood(g, vertex_id, ρ)
+        n_points_area = length(neighbours)
+
+        indices_els = [get_el(idx_mapper, i) for i in neighbours] |> Iterators.flatten |> unique
         
-        # trans = arrays[group][:transmission][neighbours]
-        # act = arrays[group][:activation][neighbours]
-        # wb = act .- trans
-
-        # n_valid_simulations = n_simulations - n_broken_simulations[heart][group]
-        # n = n_points_area * n_valid_simulations * n_stim
-
-        # p_act = sum(act) / n
-        # p_wb = sum(wb) / n
-        # p_wb_cond_act = p_wb / p_act
-
-        trans = mean(arrays[group][:transmission][indices_vertices], dims=2)[:]
-        act  = mean(arrays[group][:activation][indices_vertices], dims=2)[:]
-        wb = act .- trans
-
-        n_valid_simulations = n_simulations - n_broken_simulations[heart][group]
-        n = n_valid_simulations * n_stim
-
-        p_act = mean_w(act, volume[indices_els]) / n
-        p_wb = mean_w(wb, volume[indices_els]) / n
-        p_wb_act = p_wb / p_act
-
-
-        row = Dict(
-            :i => vertex_id,
-            :heart => heart,
-            :group => group,
-
-            :fd => fd,
-
-            :p_act => p_act,
-            :p_wb_act => p_wb_act,
-            :p_wb => p_wb
+        fd = mean_w(
+            fibrosis_elements[indices_els],
+            volume[indices_els]
         )
 
-        # rows[(i - 1) * n_groups + group] = row
+        fibrosis_entropy = calculate_entropy(
+            A_elements[indices_els, indices_els],
+            fibrosis_elements[indices_els]
+        )
 
-        push!(rows_threads[t_id], row)
+        indices_vertices = elements[indices_els, :]
 
-    end
+        for group in groups
+            
+            # trans = arrays[group][:transmission][neighbours]
+            # act = arrays[group][:activation][neighbours]
+            # wb = act .- trans
+
+            # n_valid_simulations = n_simulations - n_broken_simulations[heart][group]
+            # n = n_points_area * n_valid_simulations * n_stim
+
+            # p_act = sum(act) / n
+            # p_wb = sum(wb) / n
+            # p_wb_cond_act = p_wb / p_act
+
+            trans = mean(arrays[group][:transmission][indices_vertices], dims=2)[:]
+            act  = mean(arrays[group][:activation][indices_vertices], dims=2)[:]
+            wb = act .- trans
+
+            n_valid_simulations = n_simulations - n_broken_simulations[heart][group]
+            n = n_valid_simulations * n_stim
+
+            p_act = mean_w(act, volume[indices_els]) / n
+            p_wb = mean_w(wb, volume[indices_els]) / n
+            p_wb_act = p_wb / p_act
+
+            rotorness = mean_w(
+                masks_rotors[group][:elements][indices_els],
+                volume[indices_els]
+            )
+
+            row = Dict(
+                :i => vertex_id,
+                :ρ => ρ,
+
+                :heart => heart,
+                :group => group,
+
+                :fd => fd,
+                :fe => fibrosis_entropy,
+
+                :p_act => p_act,
+                :p_wb_act => p_wb_act,
+                :p_wb => p_wb,
+
+                :rotorness => rotorness
+            )
+
+            push!(rows_threads[t_id], row)
+
+        end  # for group in groups
+
+    end  # for ρ in ρs
 
 end
 
@@ -197,6 +251,6 @@ df = DataFrame(rows)
 ##
 
 folder_save = joinpath(folder_rheeda, "averaging")
-filename_csv = joinpath(folder_save, "M$heart-$n_samples-elements-latest.csv")
+filename_csv = joinpath(folder_save, "M$heart-$n_samples-elements-rotorness-torus-latest.csv")
 
 CSV.write(filename_csv, df)
